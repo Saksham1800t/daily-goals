@@ -1,4 +1,96 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Daily Goals</string>
+
+    <string name="tab_today">Today</string>
+    <string name="tab_goals">Goals</string>
+
+    <string name="day_today">Today</string>
+    <string name="day_yesterday">Yesterday</string>
+    <string name="day_tomorrow">Tomorrow</string>
+    <string name="day_open_calendar">Open calendar</string>
+    <string name="day_back_to_today">Back to today</string>
+    <string name="day_goals_kept">goals kept</string>
+    <string name="day_kept_and_missed">kept · %1$d missed</string>
+    <string name="day_dial_description">%1$d of %2$d goals kept, %3$d missed</string>
+    <string name="day_now">%1$s now</string>
+    <string name="day_next_deadline">Next deadline %1$s</string>
+    <string name="day_view_only">Future days are view only</string>
+    <string name="day_nothing_due">Nothing is due on this day.</string>
+    <string name="day_no_goals_title">No goals yet</string>
+    <string name="day_no_goals_body">Add a goal and it will show up here on the days it is due.</string>
+    <string name="day_add_first_goal">Add your first goal</string>
+    <string name="day_hold_hint">Hold a tick to mark the goal as missed.</string>
+
+    <string name="section_missed">Missed</string>
+    <string name="section_now">Now · window open</string>
+    <string name="section_window_passed">Window passed</string>
+    <string name="section_not_ticked">Not ticked</string>
+    <string name="section_any_time">Any time today</string>
+    <string name="section_later">Later</string>
+    <string name="section_planned">Planned</string>
+    <string name="section_kept">Kept</string>
+
+    <string name="goal_all_day">All day</string>
+    <string name="goal_window">%1$s to %2$s</string>
+    <string name="goal_avoid_suffix">%1$s · avoid</string>
+    <string name="goal_minutes_left">minutes left to tick</string>
+    <string name="goal_i_failed">I failed</string>
+    <string name="goal_mark_missed">Mark as missed</string>
+    <string name="goal_clear_result">Clear result</string>
+    <string name="goal_tick_pending">%1$s, not ticked. Tap to tick, hold for more.</string>
+    <string name="goal_tick_done">%1$s, kept. Tap to untick, hold for more.</string>
+    <string name="goal_tick_failed">%1$s, missed. Tap to mark as kept, hold for more.</string>
+
+    <string name="goals_title">Goals</string>
+    <string name="goals_add">Add goal</string>
+    <string name="goals_empty">You have no goals yet. Add one to start tracking.</string>
+    <string name="goals_every_day">Every day</string>
+
+    <string name="form_new_goal">New goal</string>
+    <string name="form_edit_goal">Edit goal</string>
+    <string name="form_close">Close</string>
+    <string name="form_save">Save</string>
+    <string name="form_name">Name</string>
+    <string name="form_name_hint">For example: Wake up early</string>
+    <string name="form_type">Type</string>
+    <string name="form_type_do">Do</string>
+    <string name="form_type_avoid">Avoid</string>
+    <string name="form_type_do_help">An action you tick when it is done.</string>
+    <string name="form_type_avoid_help">A thing not to do. A tick means you kept away from it.</string>
+    <string name="form_frequency">Frequency</string>
+    <string name="form_every_day">Every day</string>
+    <string name="form_specific_days">Specific days</string>
+    <string name="form_window">Time window</string>
+    <string name="form_all_day">All day</string>
+    <string name="form_set_times">Set times</string>
+    <string name="form_starts">Starts</string>
+    <string name="form_ends">Ends</string>
+    <string name="form_pick_start">Window starts at</string>
+    <string name="form_pick_end">Window ends at</string>
+    <string name="form_ok">OK</string>
+    <string name="form_cancel">Cancel</string>
+    <string name="form_delete">Delete goal</string>
+    <string name="form_delete_title">Delete this goal?</string>
+    <string name="form_delete_body">It is removed from today and future days. Days you already ticked or missed stay in your history.</string>
+    <string name="form_delete_confirm">Delete</string>
+
+    <string name="error_name_blank">Give the goal a name.</string>
+    <string name="error_name_too_long">Keep the name to 60 characters or fewer.</string>
+    <string name="error_no_days">Choose at least one day.</string>
+    <string name="error_window_order">The end time must be after the start time.</string>
+
+    <string name="sentence_do">I will</string>
+    <string name="sentence_avoid">I will stick to</string>
+    <string name="sentence_name_placeholder">…</string>
+    <string name="sentence_every_day">every day</string>
+    <string name="sentence_on_days">on %1$s</string>
+    <string name="sentence_no_days">on no days yet</string>
+    <string name="sentence_day_range">%1$s to %2$s</string>
+    <string name="sentence_all_day">all day</string>
+    <string name="sentence_between">between %1$s and %2$s</string>
+
+    <string name="calendar_previous_month">Previous month</string>
+    <string name="calendar_next_month">Next month</string>
+    <string name="calendar_close">Close</string>
 </resources>
