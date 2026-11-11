@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="window_background">#0C0A14</color>
+    <color name="logo_ring_start">#C6F432</color>
+    <color name="logo_ring_end">#2EE6A6</color>
+    <color name="logo_tick">#F6F4FF</color>
+</resources>
