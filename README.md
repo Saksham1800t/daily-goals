@@ -4,8 +4,19 @@ A personal, offline Android habit tracker. Each goal has its own time window and
 its own failure rules, and the day screen shows what is due now, what can be done
 any time today and what was missed.
 
-The app is at an early stage: it currently builds and shows the splash screen and
-an empty home screen.
+What works today:
+
+- Create, edit and delete goals. A goal is something to do or something to avoid,
+  due every day or on chosen weekdays, all day or inside a time window.
+- The day screen: a 24-hour dial with each goal's window, goals grouped by
+  deadline, a week strip and a month calendar.
+- Tick a goal, or mark it as missed. Past days can be edited; future days are
+  view only.
+
+Not built yet: automatic failure when a window or the day ends, reminders, and
+app blocking.
+
+Run the unit tests with `./gradlew testDebugUnitTest`.
 
 ## Build
 
@@ -35,3 +46,5 @@ None yet. The app has no internet permission and never will.
 - Android 10 or newer is required.
 - The splash animation plays on Android 12 and newer; older versions show the
   still logo.
+- A time window must start and end on the same day, so it cannot cross midnight.
+- Goals are listed in the order they were created; they cannot be reordered yet.
