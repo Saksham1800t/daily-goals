@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.dailygoals.R
 import com.example.dailygoals.model.GoalType
+import com.example.dailygoals.model.WarningMode
 import com.example.dailygoals.ui.daysPhrase
 import com.example.dailygoals.ui.windowPhrase
 
@@ -41,6 +42,11 @@ fun GoalSentence(form: GoalFormState, modifier: Modifier = Modifier) {
         if (form.discipline.failOnWindowEnd) add(stringResource(R.string.sentence_fail_window))
         if (form.discipline.failOnDayEnd) add(stringResource(R.string.sentence_fail_day))
         if (form.discipline.failOnManual) add(stringResource(R.string.sentence_fail_manual))
+    }
+    val warning = when (form.warningMode) {
+        WarningMode.NONE -> null
+        WarningMode.ONCE -> stringResource(R.string.sentence_warn_once)
+        WarningMode.REPEATING -> stringResource(R.string.sentence_warn_repeating, form.intervalMinutes)
     }
     val measurement = form.measurement
     val amountPhrase = if (measurement.isAmount && measurement.target > 0) {
@@ -67,6 +73,11 @@ fun GoalSentence(form: GoalFormState, modifier: Modifier = Modifier) {
             append(stringResource(R.string.sentence_fails_if))
             append(' ')
             withStyle(highlight) { append(rules.joinToString(stringResource(R.string.sentence_or))) }
+            append('.')
+        }
+        if (warning != null) {
+            append(' ')
+            withStyle(highlight) { append(warning) }
             append('.')
         }
     }

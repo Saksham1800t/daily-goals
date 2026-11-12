@@ -14,10 +14,12 @@ import com.example.dailygoals.model.Frequency
 import com.example.dailygoals.model.Goal
 import com.example.dailygoals.model.GoalDiscipline
 import com.example.dailygoals.model.GoalMeasurement
+import com.example.dailygoals.model.GoalReminder
 import com.example.dailygoals.model.GoalSchedule
 import com.example.dailygoals.model.GoalType
 import com.example.dailygoals.model.MeasureType
 import com.example.dailygoals.model.TimeWindow
+import com.example.dailygoals.model.WarningMode
 import java.time.DayOfWeek
 import java.time.LocalDate
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,6 +46,10 @@ data class GoalFormState(
     val targetText: String = "",
     val minimumText: String = "",
     val minimumLabel: String = "",
+    val warningMode: WarningMode = WarningMode.REPEATING,
+    val intervalMinutes: Int = GoalReminder.DEFAULT_INTERVAL_MINUTES,
+    val allDayMinute: Int = GoalReminder.DEFAULT_ALL_DAY_MINUTE,
+    val strongAlert: Boolean = false,
     val errors: Set<GoalError> = emptySet(),
     val original: Goal? = null,
 ) {
@@ -53,6 +59,9 @@ data class GoalFormState(
     /** A rule that needs a window is switched off while the goal has none. */
     val discipline: GoalDiscipline
         get() = GoalDiscipline(failOnWindowEnd && hasWindow, failOnDayEnd, failOnManual)
+
+    val reminder: GoalReminder
+        get() = GoalReminder(warningMode, intervalMinutes, allDayMinute, strongAlert && warningMode != WarningMode.NONE)
 
     val measurement: GoalMeasurement
         get() = if (isAmount) {
@@ -107,6 +116,10 @@ class GoalFormViewModel(private val repository: GoalRepository, private val cloc
                     targetText = if (goal.measurement.isAmount) goal.measurement.target.toString() else "",
                     minimumText = if (goal.measurement.isAmount) goal.measurement.minimum.toString() else "",
                     minimumLabel = goal.measurement.minimumLabel.orEmpty(),
+                    warningMode = goal.reminder.mode,
+                    intervalMinutes = goal.reminder.intervalMinutes,
+                    allDayMinute = goal.reminder.allDayMinute,
+                    strongAlert = goal.reminder.strongAlert,
                     original = goal,
                 )
             }
@@ -151,6 +164,7 @@ class GoalFormViewModel(private val repository: GoalRepository, private val cloc
             schedule = form.schedule(clock.now().toLocalDate()),
             discipline = form.discipline,
             measurement = form.measurement,
+            reminder = form.reminder,
         )
         viewModelScope.launch {
             repository.save(goal)
