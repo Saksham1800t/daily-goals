@@ -1,0 +1,78 @@
+package com.example.dailygoals.blocker
+
+import android.content.Context
+import com.example.dailygoals.engine.BlockSession
+import java.io.File
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+
+/** How the block is shown over the test app; the proof of concept tries them in the plan's order. */
+enum class BlockMethod { ACTIVITY, OVERLAY, HOME, OVERLAY_THEN_HOME, ACTIVITY_THEN_HOME }
+
+/**
+ * State and log for the blocking test. It lives in plain preferences and a text file so the service can
+ * read it after a reboot without any screen of the app having been opened.
+ */
+class PocStore(context: Context) {
+    private val prefs = context.getSharedPreferences("block_test", Context.MODE_PRIVATE)
+    private val logFile = File(context.filesDir, "block-test.log")
+    private val stamp = DateTimeFormatter.ofPattern("HH:mm:ss.SSS")
+
+    var target: String
+        get() = prefs.getString(KEY_TARGET, DEFAULT_TARGET).orEmpty().ifBlank { DEFAULT_TARGET }
+        set(value) = prefs.edit().putString(KEY_TARGET, value.trim()).apply()
+
+    var method: BlockMethod
+        get() = runCatching { BlockMethod.valueOf(prefs.getString(KEY_METHOD, null).orEmpty()) }.getOrDefault(BlockMethod.OVERLAY)
+        set(value) = prefs.edit().putString(KEY_METHOD, value.name).apply()
+
+    fun session(): BlockSession? {
+        if (!prefs.getBoolean(KEY_ACTIVE, false)) return null
+        val until = prefs.getLong(KEY_UNTIL, NO_END)
+        return BlockSession(target, until.takeIf { it != NO_END })
+    }
+
+    /** [minutes] of null blocks until the test is switched off. */
+    fun start(minutes: Int?) {
+        val until = minutes?.let { System.currentTimeMillis() + it * MILLIS_PER_MINUTE } ?: NO_END
+        prefs.edit().putBoolean(KEY_ACTIVE, true).putLong(KEY_UNTIL, until).apply()
+        log("test started: $target, method $method, ${minutes?.let { "$it min" } ?: "until switched off"}")
+    }
+
+    fun stop() {
+        prefs.edit().putBoolean(KEY_ACTIVE, false).apply()
+        log("test stopped")
+    }
+
+    @Synchronized
+    fun log(message: String) {
+        runCatching {
+            logFile.appendText("${LocalTime.now().format(stamp)} $message\n")
+            if (logFile.length() > MAX_LOG_BYTES) {
+                logFile.writeText(logFile.readLines().takeLast(KEEP_LINES).joinToString("\n", postfix = "\n"))
+            }
+        }
+    }
+
+    @Synchronized
+    fun readLog(limit: Int = SHOWN_LINES): List<String> =
+        runCatching { logFile.readLines().takeLast(limit) }.getOrDefault(emptyList())
+
+    @Synchronized
+    fun clearLog() {
+        runCatching { logFile.writeText("") }
+    }
+
+    companion object {
+        const val DEFAULT_TARGET = "com.android.chrome"
+        private const val KEY_TARGET = "target"
+        private const val KEY_METHOD = "method"
+        private const val KEY_ACTIVE = "active"
+        private const val KEY_UNTIL = "until"
+        private const val NO_END = -1L
+        private const val MILLIS_PER_MINUTE = 60_000L
+        private const val MAX_LOG_BYTES = 60_000L
+        private const val KEEP_LINES = 200
+        private const val SHOWN_LINES = 60
+    }
+}
