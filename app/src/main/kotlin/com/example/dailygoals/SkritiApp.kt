@@ -7,9 +7,24 @@ import com.example.dailygoals.data.GoalRepository
 import com.example.dailygoals.data.SettingsStore
 import com.example.dailygoals.data.backup.BackupService
 import com.example.dailygoals.engine.Clock
+import com.example.dailygoals.notify.AlarmScheduler
+import com.example.dailygoals.notify.NotificationChannels
+import com.example.dailygoals.notify.PermissionChecker
+import com.example.dailygoals.notify.WarningNotifier
+import com.example.dailygoals.notify.WarningRunner
 import java.time.LocalDateTime
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.launch
 
 class SkritiApp : Application() {
+    /** Lives as long as the process; used for work that must finish after a screen or receiver is gone. */
+    val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     val isDebuggable: Boolean get() = applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
 
     val settings: SettingsStore by lazy { SettingsStore(getSharedPreferences("settings", MODE_PRIVATE)) }
@@ -27,4 +42,25 @@ class SkritiApp : Application() {
     val repository: GoalRepository by lazy { GoalRepository(database, settings, clock) }
 
     val backup: BackupService by lazy { BackupService(database, settings) }
+
+    val permissions: PermissionChecker by lazy { PermissionChecker(this) }
+
+    val warnings: WarningRunner by lazy {
+        WarningRunner(repository, AlarmScheduler(this, permissions), permissions, WarningNotifier(this))
+    }
+
+    @OptIn(FlowPreview::class)
+    override fun onCreate() {
+        super.onCreate()
+        NotificationChannels.ensure(this)
+        scope.launch {
+            combine(repository.changes, settings.settings) { _, _ -> }
+                .debounce(CHANGE_DEBOUNCE_MILLIS)
+                .collect { warnings.run() }
+        }
+    }
+
+    private companion object {
+        const val CHANGE_DEBOUNCE_MILLIS = 500L
+    }
 }
