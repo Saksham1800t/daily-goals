@@ -41,11 +41,14 @@ import com.example.dailygoals.ui.goals.GoalFormScreen
 import com.example.dailygoals.ui.goals.GoalFormViewModel
 import com.example.dailygoals.ui.goals.GoalsScreen
 import com.example.dailygoals.ui.goals.GoalsViewModel
+import com.example.dailygoals.ui.settings.SettingsScreen
+import com.example.dailygoals.ui.settings.SettingsViewModel
 import com.example.dailygoals.ui.theme.accentBrush
 
 private enum class Tab(val label: Int, val icon: AppIconKind) {
     TODAY(R.string.tab_today, AppIconKind.LOGO),
     GOALS(R.string.tab_goals, AppIconKind.LIST),
+    SETTINGS(R.string.tab_settings, AppIconKind.SETTINGS),
 }
 
 private const val NEW_GOAL_ID = 0L
@@ -78,6 +81,7 @@ fun AppRoot() {
                         onAdd = { openForm(NEW_GOAL_ID) },
                         onEdit = openForm,
                     )
+                    Tab.SETTINGS -> SettingsScreen(viewModel = viewModel(factory = SettingsViewModel.Factory))
                 }
             }
             BottomBar(tab, onSelect = { tab = it })
