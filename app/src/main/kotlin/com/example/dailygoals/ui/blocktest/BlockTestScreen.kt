@@ -1,7 +1,5 @@
 package com.example.dailygoals.ui.blocktest
 
-import android.content.ComponentName
-import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
@@ -47,6 +45,8 @@ import com.example.dailygoals.R
 import com.example.dailygoals.SkritiApp
 import com.example.dailygoals.blocker.BlockMethod
 import com.example.dailygoals.blocker.BlockerService
+import com.example.dailygoals.blocker.BlockerStatus
+import com.example.dailygoals.blocker.BlockerWatchdog
 import com.example.dailygoals.engine.ForegroundRules
 import com.example.dailygoals.ui.components.AccentButton
 import com.example.dailygoals.ui.components.AppIconKind
@@ -63,12 +63,6 @@ private val SUGGESTIONS = listOf("com.android.chrome", "com.google.android.youtu
 private val DURATIONS = listOf<Int?>(15, 60, 480, null)
 private const val REFRESH_MILLIS = 1000L
 
-private fun isServiceEnabled(context: Context): Boolean {
-    val enabled = Settings.Secure.getString(context.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES).orEmpty()
-    val component = ComponentName(context, BlockerService::class.java)
-    return enabled.split(':').any { it == component.flattenToString() || it == component.flattenToShortString() }
-}
-
 /** The hidden test screen of Phase 2A: guided setup, one test app, the block method and a live log. */
 @Composable
 fun BlockTestScreen(onClose: () -> Unit, modifier: Modifier = Modifier) {
@@ -80,6 +74,7 @@ fun BlockTestScreen(onClose: () -> Unit, modifier: Modifier = Modifier) {
     var method by remember { mutableStateOf(store.method) }
     var minutes by remember { mutableStateOf<Int?>(15) }
     var pauseMedia by remember { mutableStateOf(store.pauseMedia) }
+    var keepAlive by remember { mutableStateOf(store.keepAlive) }
     LaunchedEffect(Unit) {
         while (true) {
             tick++
@@ -87,7 +82,9 @@ fun BlockTestScreen(onClose: () -> Unit, modifier: Modifier = Modifier) {
         }
     }
     val refresh = tick
-    val enabledInSettings = remember(refresh) { isServiceEnabled(context) }
+    val enabledInSettings = remember(refresh) { BlockerStatus.isServiceEnabled(context) }
+    val overlayAllowed = remember(refresh) { BlockerStatus.canDrawOverBlockedApps(context) }
+    val batteryUnrestricted = remember(refresh) { BlockerStatus.isBatteryUnrestricted(context) }
     val running = remember(refresh) { BlockerService.instance != null }
     val session = remember(refresh) { store.session()?.takeIf { ForegroundRules.isActive(it, System.currentTimeMillis()) } }
     val log = remember(refresh) { store.readLog() }
@@ -121,9 +118,25 @@ fun BlockTestScreen(onClose: () -> Unit, modifier: Modifier = Modifier) {
             Text(stringResource(R.string.poc_service_help), fontSize = 13.5.sp)
             StatusLine(R.string.poc_status_enabled, enabledInSettings, colors.done, colors.pending)
             StatusLine(R.string.poc_status_running, running, colors.done, colors.pending)
+            StatusLine(R.string.poc_status_overlay, overlayAllowed, colors.done, colors.pending)
+            StatusLine(R.string.poc_status_battery, batteryUnrestricted, colors.done, colors.pending)
             PillButton(stringResource(R.string.poc_open_accessibility), Modifier.padding(top = 10.dp)) {
                 context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
             }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
+                PillButton(stringResource(R.string.poc_allow_overlay)) {
+                    runCatching { context.startActivity(BlockerStatus.overlayPermissionIntent(context)) }
+                }
+                PillButton(stringResource(R.string.poc_allow_battery)) {
+                    runCatching { context.startActivity(BlockerStatus.batteryExemptionIntent(context)) }
+                }
+            }
+            Text(
+                text = stringResource(R.string.poc_extra_permissions_help),
+                fontSize = 12.5.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 10.dp),
+            )
             Text(
                 text = stringResource(R.string.poc_privacy_note),
                 fontSize = 12.5.sp,
@@ -172,6 +185,27 @@ fun BlockTestScreen(onClose: () -> Unit, modifier: Modifier = Modifier) {
                     Text(stringResource(R.string.poc_pause_media_help), fontSize = 12.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 10.dp)
+                    .toggleable(
+                        value = keepAlive,
+                        role = Role.Checkbox,
+                        onValueChange = {
+                            keepAlive = it
+                            store.keepAlive = it
+                            BlockerService.instance?.applyKeepAlive()
+                        },
+                    ),
+            ) {
+                Checkbox(checked = keepAlive, onCheckedChange = null, modifier = Modifier.padding(end = 12.dp))
+                Column {
+                    Text(stringResource(R.string.poc_keep_alive), fontSize = 14.5.sp, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.poc_keep_alive_help), fontSize = 12.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
             Text(stringResource(R.string.poc_duration), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 14.dp, bottom = 6.dp))
             SegmentedChoice(
                 options = DURATIONS.map { it to durationLabel(it) },
@@ -179,8 +213,17 @@ fun BlockTestScreen(onClose: () -> Unit, modifier: Modifier = Modifier) {
                 onSelect = { minutes = it },
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 14.dp)) {
-                AccentButton(stringResource(R.string.poc_start), onClick = { store.start(minutes) })
-                PillButton(stringResource(R.string.poc_stop), Modifier.padding(top = 2.dp)) { store.stop() }
+                AccentButton(
+                    stringResource(R.string.poc_start),
+                    onClick = {
+                        store.start(minutes)
+                        BlockerWatchdog.schedule(context)
+                    },
+                )
+                PillButton(stringResource(R.string.poc_stop), Modifier.padding(top = 2.dp)) {
+                    store.stop()
+                    BlockerWatchdog.cancel(context)
+                }
             }
             Text(
                 text = session?.let { active ->
@@ -264,6 +307,7 @@ private fun MethodRow(method: BlockMethod, selected: Boolean, onClick: () -> Uni
         BlockMethod.HOME -> R.string.poc_method_home to R.string.poc_method_home_help
         BlockMethod.OVERLAY_THEN_HOME -> R.string.poc_method_overlay_home to R.string.poc_method_overlay_home_help
         BlockMethod.ACTIVITY_THEN_HOME -> R.string.poc_method_activity_home to R.string.poc_method_activity_home_help
+        BlockMethod.HOME_THEN_ACTIVITY -> R.string.poc_method_home_activity to R.string.poc_method_home_activity_help
     }
     Row(
         verticalAlignment = Alignment.CenterVertically,

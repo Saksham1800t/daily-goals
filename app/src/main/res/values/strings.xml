@@ -33,6 +33,14 @@
     <string name="sentence_warn_repeating">I will be warned every %1$d minutes</string>
 
     <string name="blocker_service_description">Lets Skriti see which app is in front, by package name only, so it can show a block screen over an app you chose. It never reads what is on your screen.</string>
+    <string name="channel_blocker">Blocker running</string>
+    <string name="channel_blocker_description">A quiet notification that keeps the blocker running.</string>
+    <string name="channel_service_alerts">Blocker problems</string>
+    <string name="channel_service_alerts_description">Tells you when blocking has stopped working.</string>
+    <string name="blocker_notification_title">Skriti blocker is on</string>
+    <string name="blocker_notification_text">Watching for the apps you chose to block.</string>
+    <string name="watchdog_title">Blocking is switched off</string>
+    <string name="watchdog_text">The accessibility service is off, so nothing is being blocked. Tap to open Skriti and switch it on again.</string>
     <string name="settings_block_test">Blocking test (testing)</string>
     <string name="settings_block_test_help">A hidden screen for trying out how apps can be blocked. Only in test builds.</string>
     <string name="settings_block_test_open">Open the blocking test</string>
@@ -47,6 +55,15 @@
     <string name="poc_status_enabled">Switched on in settings</string>
     <string name="poc_status_running">Running now</string>
     <string name="poc_open_accessibility">Open Accessibility settings</string>
+    <string name="poc_status_overlay">Display over other apps</string>
+    <string name="poc_status_battery">Battery: unrestricted</string>
+    <string name="poc_allow_overlay">Allow display over apps</string>
+    <string name="poc_allow_battery">Allow in background</string>
+    <string name="poc_extra_permissions_help">Display over other apps lets the service open a block screen. The battery setting asks Android not to stop the blocker while the phone sits idle.</string>
+    <string name="poc_keep_alive">Keep the blocker alive</string>
+    <string name="poc_keep_alive_help">Shows a quiet notification while the service runs, so Android is less likely to stop it.</string>
+    <string name="poc_method_home_activity">Home, then block screen</string>
+    <string name="poc_method_home_activity_help">Presses Home and then opens a block screen of this app. Needs Display over other apps.</string>
     <string name="poc_privacy_note">Android may later show a notice that this service can see which app is open. That is expected: it reads package names only, never the screen.</string>
     <string name="poc_step_test">3. Run a test</string>
     <string name="poc_target">Package name of the test app</string>
