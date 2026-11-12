@@ -73,8 +73,59 @@ class MigrationTest {
 
     private fun migrate() = MigrationSql.V1_TO_V2.forEach(::execute)
 
+    private fun migrateToThree() = MigrationSql.V2_TO_V3.forEach(::execute)
+
+    /** Builds a fresh database of [version] beside the migrated one and compares structure table by table. */
+    private fun assertStructureEqualsFresh(version: Int) {
+        val migrated = tableNames(version).associateWith(::structureOf)
+        val original = connection
+        val fresh = DriverManager.getConnection("jdbc:sqlite::memory:")
+        connection = fresh
+        createVersion(version)
+        val created = tableNames(version).associateWith(::structureOf)
+        fresh.close()
+        connection = original
+        tableNames(version).forEach { table -> assertEquals("structure of $table", created.getValue(table), migrated.getValue(table)) }
+    }
+
     @Test
-    fun versionTwoSchemaFileMatchesTheDatabaseVersionInCode() {
+    fun versionThreeKeepsRowsAndTurnsWarningsOffForExistingGoals() {
+        createVersion(2)
+        insertVersionOneData()
+        migrateToThree()
+        val reminders = query("SELECT id, name, warningMode, warningIntervalMin, warningMinute, strongAlert FROM goals ORDER BY id") {
+            listOf(it.getLong(1), it.getString(2), it.getString(3), it.getInt(4), it.getInt(5), it.getInt(6))
+        }
+        assertEquals(
+            listOf(listOf(1L, "Wake up early", "NONE", 10, 1200, 0), listOf(2L, "No smoking", "NONE", 10, 1200, 0)),
+            reminders,
+        )
+        assertEquals(listOf(2), query("SELECT COUNT(*) FROM check_ins") { it.getInt(1) })
+        assertEquals(listOf(0), query("SELECT COUNT(*) FROM warning_marks") { it.getInt(1) })
+        execute("INSERT INTO warning_marks (goalId, date, lastIndex, level, firedAt) VALUES (1, '2026-11-11', 2, 'HEADS_UP', 5)")
+        assertEquals(listOf(2), query("SELECT lastIndex FROM warning_marks") { it.getInt(1) })
+    }
+
+    @Test
+    fun versionThreeStructureEqualsAFreshVersionThreeDatabase() {
+        createVersion(2)
+        migrateToThree()
+        assertStructureEqualsFresh(3)
+    }
+
+    @Test
+    fun migratingStraightFromVersionOneToThreeKeepsEverything() {
+        createVersion(1)
+        insertVersionOneData()
+        migrate()
+        migrateToThree()
+        assertEquals(listOf(2), query("SELECT COUNT(*) FROM goals") { it.getInt(1) })
+        assertEquals(listOf(listOf(1, 1)), query("SELECT SUM(failOnManual = 0), SUM(failOnManual = 1) FROM goals") { listOf(it.getInt(1), it.getInt(2)) })
+        assertStructureEqualsFresh(3)
+    }
+
+    @Test
+    fun schemaFileForTheCurrentVersionMatchesTheCode() {
         assertEquals(AppDatabase.VERSION, schemaOf(AppDatabase.VERSION).getInt("version"))
         assertTrue(File(schemaDir, "1.json").exists())
     }
@@ -140,17 +191,7 @@ class MigrationTest {
     fun migratedStructureEqualsAFreshVersionTwoDatabase() {
         createVersion(1)
         migrate()
-        val migrated = tableNames(2).associateWith(::structureOf)
-
-        val fresh = DriverManager.getConnection("jdbc:sqlite::memory:")
-        val original = connection
-        connection = fresh
-        createVersion(2)
-        val created = tableNames(2).associateWith(::structureOf)
-        fresh.close()
-        connection = original
-
-        tableNames(2).forEach { table -> assertEquals("structure of $table", created.getValue(table), migrated.getValue(table)) }
+        assertStructureEqualsFresh(2)
     }
 
     /** Columns (name, type, not null, default, key), indices and foreign keys, ignoring column order. */

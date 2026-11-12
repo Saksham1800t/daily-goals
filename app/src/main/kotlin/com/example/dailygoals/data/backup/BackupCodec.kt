@@ -7,6 +7,7 @@ import com.example.dailygoals.data.DisciplineColumns
 import com.example.dailygoals.data.GoalEntity
 import com.example.dailygoals.data.MeasurementColumns
 import com.example.dailygoals.data.PeriodResultEntity
+import com.example.dailygoals.data.ReminderColumns
 import com.example.dailygoals.data.ScheduleColumns
 import com.example.dailygoals.engine.PeriodStatus
 import com.example.dailygoals.model.DayStatus
@@ -17,6 +18,7 @@ import com.example.dailygoals.model.GoalType
 import com.example.dailygoals.model.MeasureType
 import com.example.dailygoals.model.MonthlyNth
 import com.example.dailygoals.model.QuotaFailureMode
+import com.example.dailygoals.model.WarningMode
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -124,6 +126,10 @@ object BackupCodec {
         put("targetAmount", goal.measurement.targetAmount)
         put("minimumAmount", goal.measurement.minimumAmount)
         put("minimumLabel", goal.measurement.minimumLabel ?: JSONObject.NULL)
+        put("warningMode", goal.reminder.warningMode.name)
+        put("warningIntervalMin", goal.reminder.warningIntervalMin)
+        put("warningMinute", goal.reminder.warningMinute)
+        put("strongAlert", goal.reminder.strongAlert)
     }
 
     private fun goalFrom(json: JSONObject) = GoalEntity(
@@ -156,6 +162,12 @@ object BackupCodec {
             targetAmount = json.optInt("targetAmount", 1),
             minimumAmount = json.optInt("minimumAmount", 1),
             minimumLabel = json.stringOrNull("minimumLabel"),
+        ),
+        reminder = ReminderColumns(
+            warningMode = WarningMode.valueOf(json.optString("warningMode", "NONE")),
+            warningIntervalMin = json.optInt("warningIntervalMin", 10),
+            warningMinute = json.optInt("warningMinute", 1200),
+            strongAlert = json.optBoolean("strongAlert", false),
         ),
     )
 

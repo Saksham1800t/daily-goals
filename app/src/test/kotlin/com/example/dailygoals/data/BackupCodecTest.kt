@@ -12,6 +12,7 @@ import com.example.dailygoals.model.GoalType
 import com.example.dailygoals.model.MeasureType
 import com.example.dailygoals.model.MonthlyNth
 import com.example.dailygoals.model.QuotaFailureMode
+import com.example.dailygoals.model.WarningMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
@@ -39,11 +40,12 @@ class BackupCodecTest {
         ),
         discipline = DisciplineColumns(failOnWindowEnd = true, failOnDayEnd = false, failOnManual = true),
         measurement = MeasurementColumns(MeasureType.AMOUNT, "min", 120, 20, "Put on shoes"),
+        reminder = ReminderColumns(WarningMode.REPEATING, warningIntervalMin = 15, warningMinute = 1260, strongAlert = true),
     )
     private val checkIn = CheckInEntity(3, 7, "2026-11-10", DayStatus.FAILED, FailReason.WINDOW_END, null, 555, amount = 15, lateMinutes = null)
     private val log = AmountLogEntity(9, 7, "2026-11-10", 15, 444)
     private val period = PeriodResultEntity(1, 7, "2026-11-09", "2026-11-15", 4, 4, 7, 0, 0, 2, PeriodStatus.FAILED, "2026-11-13", 777)
-    private val backup = Backup(2, listOf(goal), listOf(checkIn), listOf(log), listOf(period), dayEndMinute = 1380, minimumWeightPercent = 70)
+    private val backup = Backup(AppDatabase.VERSION,listOf(goal), listOf(checkIn), listOf(log), listOf(period), dayEndMinute = 1380, minimumWeightPercent = 70)
 
     @Test
     fun everythingSurvivesAnEncodeAndDecodeRoundTrip() {
@@ -64,6 +66,8 @@ class BackupCodecTest {
         assertEquals(MeasureType.CHECK, gym.measurement.measureType)
         assertEquals(false, gym.discipline.failOnManual)
         assertEquals(0, decoded.checkIns.single().amount)
+        assertEquals(WarningMode.NONE, gym.reminder.warningMode)
+        assertEquals(10, gym.reminder.warningIntervalMin)
         assertEquals(null, decoded.dayEndMinute)
     }
 
