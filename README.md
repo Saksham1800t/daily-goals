@@ -1,4 +1,4 @@
-# Daily Goals
+# Skriti
 
 A personal, offline Android habit tracker. Each goal has its own time window and
 its own failure rules, and the day screen shows what is due now, what can be done
@@ -30,7 +30,7 @@ Requirements: JDK 17 and the Android SDK (platform 37, build-tools 37).
 The APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
 
 Every push also builds the APK with GitHub Actions; download it from the run's
-`daily-goals-debug-apk` artifact.
+`skriti-debug-apk` artifact.
 
 ## Install
 
