@@ -56,7 +56,7 @@
     <string name="poc_method_overlay">Draw a block view</string>
     <string name="poc_method_overlay_help">The service draws the block in an accessibility overlay window. No extra permission.</string>
     <string name="poc_method_home">Send home</string>
-    <string name="poc_method_home_help">The service presses Home every time the test app opens.</string>
+    <string name="poc_method_home_help">The service presses Home every time the test app opens. Apps like YouTube then shrink to a floating window and keep playing.</string>
     <string name="poc_method_overlay_home">Block view, then send home</string>
     <string name="poc_method_overlay_home_help">The overlay shows, and after 2.5 seconds Home is pressed.</string>
     <string name="poc_method_activity_home">Block screen, home if it fails</string>

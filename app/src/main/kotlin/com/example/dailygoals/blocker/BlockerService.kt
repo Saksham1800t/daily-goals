@@ -4,6 +4,8 @@ import android.accessibilityservice.AccessibilityService
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.PixelFormat
+import android.media.AudioAttributes
+import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.os.Handler
 import android.os.Looper
@@ -27,6 +29,7 @@ class BlockerService : AccessibilityService() {
     private val store get() = (application as SkritiApp).pocStore
     private var overlay: View? = null
     private var shownAtUptime = 0L
+    private var focusRequest: AudioFocusRequest? = null
     private var launchers: Set<String> = emptySet()
     private var launchersReadAt = Long.MIN_VALUE / 2
 
@@ -90,7 +93,36 @@ class BlockerService : AccessibilityService() {
             audio.dispatchMediaKeyEvent(KeyEvent(now, now, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PAUSE, 0))
         }.onFailure { store.log("pause key failed: ${it.javaClass.simpleName}") }
         store.log("pause key sent while sound was playing")
-        handler.postDelayed({ store.log("sound still playing after the pause key: ${audio.isMusicActive}") }, PAUSE_CHECK_MILLIS)
+        takeAudioFocus(audio)
+        handler.postDelayed({ store.log("sound still playing after the pause key and focus request: ${audio.isMusicActive}") }, PAUSE_CHECK_MILLIS)
+    }
+
+    /**
+     * Most media apps pause when another app takes audio focus. Android 17 restricts background audio,
+     * so the answer is logged to learn whether this request is allowed from the service.
+     */
+    private fun takeAudioFocus(audio: AudioManager) {
+        val attributes = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build()
+        val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+            .setAudioAttributes(attributes)
+            .setOnAudioFocusChangeListener { }
+            .build()
+        val result = runCatching { audio.requestAudioFocus(request) }.getOrDefault(AudioManager.AUDIOFOCUS_REQUEST_FAILED)
+        store.log(
+            "audio focus request: " + when (result) {
+                AudioManager.AUDIOFOCUS_REQUEST_GRANTED -> "granted"
+                AudioManager.AUDIOFOCUS_REQUEST_DELAYED -> "delayed"
+                else -> "refused"
+            },
+        )
+        if (result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) focusRequest = request
+    }
+
+    private fun releaseAudioFocus() {
+        val request = focusRequest ?: return
+        focusRequest = null
+        runCatching { getSystemService(AudioManager::class.java).abandonAudioFocusRequest(request) }
+        store.log("audio focus released")
     }
 
     private fun show(received: Long) {
@@ -158,6 +190,7 @@ class BlockerService : AccessibilityService() {
     }
 
     private fun hide() {
+        releaseAudioFocus()
         overlay?.let { view ->
             runCatching { getSystemService(WindowManager::class.java).removeView(view) }
             overlay = null
