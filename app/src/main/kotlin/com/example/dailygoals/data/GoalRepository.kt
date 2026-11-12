@@ -6,7 +6,11 @@ import com.example.dailygoals.engine.CheckAction
 import com.example.dailygoals.engine.CheckInRules
 import com.example.dailygoals.engine.CheckResult
 import com.example.dailygoals.engine.Clock
+import com.example.dailygoals.engine.DeliveryLevel
 import com.example.dailygoals.engine.FailureEvaluator
+import com.example.dailygoals.engine.Warning
+import com.example.dailygoals.engine.WarningPlan
+import com.example.dailygoals.engine.WarningPlanner
 import com.example.dailygoals.engine.PeriodStatus
 import com.example.dailygoals.engine.Periods
 import com.example.dailygoals.engine.QuotaRules
@@ -26,6 +30,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
+data class WarningBatch(val plan: WarningPlan, val goals: Map<Long, Goal>, val resolvedToday: Set<Long>, val now: java.time.Instant)
+
 class GoalRepository(
     private val database: AppDatabase,
     private val settings: SettingsStore,
@@ -35,6 +41,7 @@ class GoalRepository(
     private val checkInDao = database.checkInDao()
     private val amountLogDao = database.amountLogDao()
     private val periodDao = database.periodResultDao()
+    private val warningDao = database.warningMarkDao()
     private val evaluationLock = Mutex()
 
     val goals: Flow<List<Goal>> = goalDao.observeAll().map { list -> list.map(GoalEntity::toModel) }
@@ -240,7 +247,43 @@ class GoalRepository(
         }
     }
 
+    /** Fires whenever goals or results change, so alarms can be rebuilt from the database. */
+    val changes: Flow<Unit> = kotlinx.coroutines.flow.combine(goals, checkIns) { _, _ -> }
+
+    /** What to warn about right now and when the app next needs to wake up. */
+    suspend fun warningBatch(): WarningBatch {
+        val now = clock.now()
+        val today = now.toLocalDate()
+        val models = goalDao.all().map(GoalEntity::toModel)
+        val statuses = checkInDao.all().associate { (it.goalId to LocalDate.parse(it.date)) to it.status }
+        val marks = warningDao.forDate(today.toString()).associate { (it.goalId to LocalDate.parse(it.date)) to it.lastIndex }
+        val plan = WarningPlanner.plan(
+            goals = models,
+            statusOf = { goalId, date -> statuses[goalId to date] ?: DayStatus.PENDING },
+            marks = marks,
+            now = now,
+            zone = clock.zone,
+            dayEndMinute = settings.settings.value.dayEndMinute,
+        )
+        val resolved = models.map { it.id }.filter { (statuses[it to today] ?: DayStatus.PENDING) != DayStatus.PENDING }.toSet()
+        return WarningBatch(plan, models.associateBy { it.id }, resolved, now.atZone(clock.zone).toInstant())
+    }
+
+    suspend fun statusOn(goalId: Long, date: LocalDate): DayStatus =
+        checkInDao.find(goalId, date.toString())?.status ?: DayStatus.PENDING
+
+    suspend fun markWarningShown(warning: Warning, level: DeliveryLevel) {
+        warningDao.upsert(
+            WarningMarkEntity(goalId = warning.goalId, date = warning.date.toString(), lastIndex = warning.index, level = level, firedAt = epochMillis()),
+        )
+        warningDao.deleteBefore(clock.now().toLocalDate().minusDays(KEEP_MARK_DAYS).toString())
+    }
+
     fun neutralDates(): Set<LocalDate> = settings.evalState().neutralDates
+
+    private companion object {
+        const val KEEP_MARK_DAYS = 7L
+    }
 
     private fun epochMillis(): Long = clock.now().atZone(clock.zone).toInstant().toEpochMilli()
 }
