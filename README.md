@@ -89,6 +89,15 @@ and I failed buttons are broadcasts rather than activity launches, and the app o
 when you tap a notification. The app uses no custom notification layouts, which is the
 other area Android 17 limits.
 
+For app blocking (work in progress), Google's Android 17 pages show no new restriction on
+accessibility services. Two things are not settled by the documentation and are being tested on
+a real phone: a block screen started by an accessibility service counts as a background
+launch, which Android restricts for apps without the "Display over other apps" permission, so
+the planned way is a view drawn in an accessibility overlay window, which needs no extra
+permission; and sideloaded apps may need "Allow restricted settings" in app info before the
+accessibility switch can be turned on. A debug build has a hidden "Blocking test" screen in
+Settings for this. The result will be written here once it has been tried.
+
 ## Permissions
 
 | Permission | Used for |
