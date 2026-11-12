@@ -29,7 +29,9 @@ class BlockerService : AccessibilityService() {
     private val store get() = (application as SkritiApp).pocStore
     private var overlay: View? = null
     private var shownAtUptime = 0L
+    private var homeSentAtUptime = Long.MIN_VALUE / 2
     private var focusRequest: AudioFocusRequest? = null
+    private var focusTried = false
     private var launchers: Set<String> = emptySet()
     private var launchersReadAt = Long.MIN_VALUE / 2
 
@@ -51,6 +53,7 @@ class BlockerService : AccessibilityService() {
             passThrough = passThroughPackages(),
             launcherPackages = launcherPackages(),
             millisSinceShown = received - shownAtUptime,
+            millisSinceHome = received - homeSentAtUptime,
         )
         if (pkg != packageName || action != ForegroundAction.NONE) {
             store.log("front: $pkg ${event.className} (event age ${received - event.eventTime} ms) -> $action")
@@ -107,6 +110,8 @@ class BlockerService : AccessibilityService() {
             .setAudioAttributes(attributes)
             .setOnAudioFocusChangeListener { }
             .build()
+        if (focusRequest != null || focusTried) return
+        focusTried = true
         val result = runCatching { audio.requestAudioFocus(request) }.getOrDefault(AudioManager.AUDIOFOCUS_REQUEST_FAILED)
         store.log(
             "audio focus request: " + when (result) {
@@ -125,9 +130,25 @@ class BlockerService : AccessibilityService() {
         store.log("audio focus released")
     }
 
+    /**
+     * A video often starts a moment after the app opens, so one pause at the instant the block appears is
+     * too early. While the block is up, check again and pause whatever has started playing.
+     */
+    private val mediaGuard = object : Runnable {
+        override fun run() {
+            if (overlay == null && !BlockActivity.isShowing()) return
+            if (store.pauseMedia) pauseMedia()
+            handler.postDelayed(this, MEDIA_GUARD_MILLIS)
+        }
+    }
+
     private fun show(received: Long) {
         shownAtUptime = received
-        if (store.pauseMedia) pauseMedia()
+        if (store.pauseMedia) {
+            pauseMedia()
+            handler.removeCallbacks(mediaGuard)
+            handler.postDelayed(mediaGuard, MEDIA_GUARD_MILLIS)
+        }
         when (store.method) {
             BlockMethod.ACTIVITY -> launchActivity(received, thenHome = false)
             BlockMethod.OVERLAY -> showOverlay(received)
@@ -187,9 +208,15 @@ class BlockerService : AccessibilityService() {
     private fun goHome(reason: String) {
         val accepted = performGlobalAction(GLOBAL_ACTION_HOME)
         store.log("sending home ($reason): accepted=$accepted")
+        if (accepted) {
+            homeSentAtUptime = SystemClock.uptimeMillis()
+            handler.post { hide() }
+        }
     }
 
     private fun hide() {
+        handler.removeCallbacks(mediaGuard)
+        focusTried = false
         releaseAudioFocus()
         overlay?.let { view ->
             runCatching { getSystemService(WindowManager::class.java).removeView(view) }
@@ -215,6 +242,7 @@ class BlockerService : AccessibilityService() {
         private const val HOME_DELAY_MILLIS = 2500L
         private const val LAUNCH_CHECK_MILLIS = 700L
         private const val PAUSE_CHECK_MILLIS = 800L
+        private const val MEDIA_GUARD_MILLIS = 700L
         private const val LAUNCHER_CACHE_MILLIS = 60_000L
 
         @Volatile
