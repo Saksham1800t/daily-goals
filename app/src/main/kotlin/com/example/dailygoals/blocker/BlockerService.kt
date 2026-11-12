@@ -17,6 +17,7 @@ import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
+import android.view.accessibility.AccessibilityWindowInfo
 import android.view.inputmethod.InputMethodManager
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
@@ -67,7 +68,7 @@ class BlockerService : AccessibilityService() {
         val session = store.session()
         val showing = overlay != null || BlockActivity.isShowing() || SystemClock.uptimeMillis() < launchPendingUntil
         if (session == null && !showing) return
-        val active = activeWindowPackage()
+        val active = activeWindowPackage(session?.targetPackage)
         if (active == null && attempt < MAX_ACTIVE_RETRIES && (pkg == session?.targetPackage || showing)) {
             handler.postDelayed({ evaluate(pkg, className, eventTime, attempt + 1) }, ACTIVE_RETRY_MILLIS)
             return
@@ -95,14 +96,25 @@ class BlockerService : AccessibilityService() {
         }
     }
 
+    /**
+     * In split-screen only one pane is the active window, so the blocked app in the other pane would
+     * stay usable. When it has a visible window of its own (not a picture-in-picture one) it counts as
+     * the active window.
+     */
     @Suppress("DEPRECATION")
-    private fun activeWindowPackage(): String? {
+    private fun activeWindowPackage(target: String?): String? {
         val root = rootInActiveWindow ?: return null
-        return try {
+        val active = try {
             root.packageName?.toString()
         } finally {
             root.recycle()
         }
+        if (target == null || active == target) return active
+        val shownInAnotherPane = windows.any { window ->
+            window.type == AccessibilityWindowInfo.TYPE_APPLICATION && !window.isInPictureInPictureMode &&
+                window.root?.let { r -> (r.packageName?.toString() == target).also { r.recycle() } } == true
+        }
+        return if (shownInAnotherPane) target else active
     }
 
     /** Every installed launcher, for the timing rules used when the active window cannot be read. */
