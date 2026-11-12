@@ -6,6 +6,64 @@
     <string name="tab_goals">Goals</string>
     <string name="tab_settings">Settings</string>
 
+    <string name="channel_warnings">Warnings</string>
+    <string name="channel_warnings_description">Reminders for goals that are due, with Done and I failed buttons.</string>
+    <string name="warn_window_open">The window is open now.</string>
+    <string name="warn_check_in">Time to check in.</string>
+    <string name="warn_still_open">Still unticked.</string>
+    <string name="warn_grace">Grace ends in %1$d min.</string>
+    <string name="warn_late">You are %1$d minutes late.</string>
+    <string name="warn_action_done">Done</string>
+    <string name="warn_action_failed">I failed</string>
+    <string name="alert_open_app">Open the app</string>
+    <string name="alert_close">Close</string>
+
+    <string name="form_warnings">Warnings</string>
+    <string name="warnings_none">None</string>
+    <string name="warnings_once">Once</string>
+    <string name="warnings_repeating">Repeating</string>
+    <string name="warnings_none_help">No notifications for this goal. It is still tracked and can still fail.</string>
+    <string name="warnings_interval">Repeat every</string>
+    <string name="warnings_from_window">Starts when the window opens and stops when the goal is ticked, fails, or the day ends.</string>
+    <string name="warnings_check_time">Check time</string>
+    <string name="warnings_from_check_time">This goal has no window, so the first warning comes at this time.</string>
+    <string name="warnings_strong">Strong alert</string>
+    <string name="warnings_strong_help">Opens over the lock screen when Android allows it. Otherwise it arrives as a pop-up with sound.</string>
+    <string name="sentence_warn_once">I will be warned once</string>
+    <string name="sentence_warn_repeating">I will be warned every %1$d minutes</string>
+
+    <string name="settings_warnings">Warnings</string>
+    <string name="settings_warnings_help">Check that warnings can reach you: notifications, exact alarms, lock-screen alerts and battery settings.</string>
+    <string name="settings_warnings_open">Warnings and permissions</string>
+
+    <string name="permissions_title">Warnings and permissions</string>
+    <string name="permissions_intro">The app works without any of these. Each one only makes warnings more reliable, and you can change them later in Settings.</string>
+    <string name="permissions_delivery_title">How warnings reach you right now</string>
+    <string name="permissions_delivery_normal">A normal warning: %1$s</string>
+    <string name="permissions_delivery_strong">A strong alert: %1$s</string>
+    <string name="level_full_screen">opens over the lock screen</string>
+    <string name="level_heads_up">pop-up with sound</string>
+    <string name="level_normal">a quiet notification</string>
+    <string name="level_in_app">only inside the app</string>
+    <string name="permission_notifications">Notifications</string>
+    <string name="permission_notifications_help">Needed to show warnings with their Done and I failed buttons.</string>
+    <string name="permission_popup">Pop-up and sound</string>
+    <string name="permission_popup_help">Warnings are set to a quiet level. Allow pop-ups for the Warnings channel so they are hard to miss.</string>
+    <string name="permission_exact">Alarms and reminders</string>
+    <string name="permission_exact_help">Lets warnings arrive at the exact minute. Without it they can be a few minutes late.</string>
+    <string name="permission_full_screen">Alerts over the lock screen</string>
+    <string name="permission_full_screen_help">Only for goals with the strong alert switch on. Android may keep this off.</string>
+    <string name="permission_battery">Keep this app alive</string>
+    <string name="permission_battery_help">Some phones stop apps in the background. Exempting this app from battery optimisation helps warnings arrive. Some brands also have an autostart list to check.</string>
+    <string name="permission_allow">Allow</string>
+    <string name="permission_open_settings">Open settings</string>
+    <string name="permission_on">On</string>
+    <string name="permission_off">Off</string>
+    <string name="permissions_keep_alive">If you force-stop the app from Android settings, Android cancels its alarms until you open it again. This is an Android rule.</string>
+    <string name="permissions_done">Done</string>
+    <string name="hint_warnings_blocked">Warnings may not reach you: notifications or exact alarms are off, so reminders only show inside the app or can be late.</string>
+    <string name="hint_set_up">Set up</string>
+
     <string name="settings_title">Settings</string>
     <string name="settings_day">Day</string>
     <string name="settings_day_end">Day-end time</string>
