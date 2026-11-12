@@ -50,7 +50,7 @@ private const val MINUTES_PER_HOUR = 60L
 private const val MINUTES_PER_DAY = 24 * MINUTES_PER_HOUR
 
 @Composable
-fun SettingsScreen(viewModel: SettingsViewModel, onOpenPermissions: () -> Unit, modifier: Modifier = Modifier) {
+fun SettingsScreen(viewModel: SettingsViewModel, onOpenPermissions: () -> Unit, onOpenBlockTest: () -> Unit, modifier: Modifier = Modifier) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -124,6 +124,11 @@ fun SettingsScreen(viewModel: SettingsViewModel, onOpenPermissions: () -> Unit, 
         }
 
         if (viewModel.debuggable) {
+            Group(R.string.settings_block_test) {
+                Text(stringResource(R.string.settings_block_test_help), fontSize = 12.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                SettingsButton(stringResource(R.string.settings_block_test_open), Modifier.padding(top = 10.dp), onOpenBlockTest)
+            }
+
             Group(R.string.settings_time_travel) {
                 val shifted = viewModel.now().format(DateTimeFormatter.ofPattern("EEE d MMM, HH:mm"))
                 Text(stringResource(R.string.settings_time_travel_now, shifted), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)

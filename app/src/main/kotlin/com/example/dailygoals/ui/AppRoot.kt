@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.dailygoals.R
 import com.example.dailygoals.SkritiApp
+import com.example.dailygoals.ui.blocktest.BlockTestScreen
 import com.example.dailygoals.ui.components.AppIcon
 import com.example.dailygoals.ui.components.AppIconKind
 import com.example.dailygoals.ui.day.DayScreen
@@ -69,6 +70,7 @@ fun AppRoot() {
 
     val app = LocalContext.current.applicationContext as SkritiApp
     var showPermissions by rememberSaveable { mutableStateOf(!app.settings.setupSeen()) }
+    var showBlockTest by rememberSaveable { mutableStateOf(false) }
     val closePermissions = {
         app.settings.markSetupSeen()
         showPermissions = false
@@ -78,6 +80,9 @@ fun AppRoot() {
         if (showPermissions) {
             BackHandler(onBack = closePermissions)
             PermissionsScreen(onClose = closePermissions, modifier = Modifier.weight(1f))
+        } else if (showBlockTest) {
+            BackHandler { showBlockTest = false }
+            BlockTestScreen(onClose = { showBlockTest = false }, modifier = Modifier.weight(1f))
         } else if (formGoalId != null) {
             BackHandler { formGoalId = null }
             GoalFormScreen(formViewModel, onClose = { formGoalId = null }, modifier = Modifier.weight(1f))
@@ -98,6 +103,7 @@ fun AppRoot() {
                     Tab.SETTINGS -> SettingsScreen(
                         viewModel = viewModel(factory = SettingsViewModel.Factory),
                         onOpenPermissions = { showPermissions = true },
+                        onOpenBlockTest = { showBlockTest = true },
                     )
                 }
             }
