@@ -92,6 +92,54 @@ class ForegroundRulesTest {
         assertEquals(ForegroundAction.HIDE_BLOCK, hide)
     }
 
+    private fun verified(event: String, active: String?, showing: Boolean = false, active2: BlockSession? = session) =
+        ForegroundRules.decide(
+            event, own, active2, showing, 1_000, passThrough,
+            launcherPackages = setOf(launcher), millisSinceShown = 100, millisSinceHome = 100, activeWindowPackage = active,
+        )
+
+    @Test
+    fun theBlockIsShownOnlyWhenTheBlockedAppIsReallyTheActiveWindow() {
+        assertEquals(ForegroundAction.SHOW_BLOCK, verified(event = target, active = target))
+        assertEquals(ForegroundAction.SHOW_BLOCK, verified(event = launcher, active = target))
+    }
+
+    @Test
+    fun aFloatingWindowOfTheBlockedAppIsNotTheAppBeingOpened() {
+        assertEquals(ForegroundAction.NONE, verified(event = target, active = launcher))
+        assertEquals(ForegroundAction.NONE, verified(event = target, active = "com.google.android.googlequicksearchbox"))
+    }
+
+    @Test
+    fun aLateLauncherReportNeverRemovesTheBlockWhileTheAppIsStillActive() {
+        assertEquals(ForegroundAction.NONE, verified(event = launcher, active = target, showing = true))
+    }
+
+    @Test
+    fun theBlockIsRemovedAsSoonAsAnotherWindowIsReallyActive() {
+        assertEquals(ForegroundAction.HIDE_BLOCK, verified(event = launcher, active = launcher, showing = true))
+        assertEquals(ForegroundAction.HIDE_BLOCK, verified(event = "com.google.android.youtube.music", active = "com.google.android.youtube.music", showing = true))
+    }
+
+    @Test
+    fun ourOwnScreensAndSystemOverlaysAsTheActiveWindowKeepTheBlockAsItIs() {
+        assertEquals(ForegroundAction.NONE, verified(event = launcher, active = own, showing = true))
+        assertEquals(ForegroundAction.NONE, verified(event = launcher, active = "com.android.systemui", showing = true))
+        assertEquals(ForegroundAction.NONE, verified(event = launcher, active = own, showing = false))
+    }
+
+    @Test
+    fun anEndedOrMissingSessionStillRemovesTheBlockWhateverIsActive() {
+        assertEquals(ForegroundAction.HIDE_BLOCK, verified(event = target, active = target, showing = true, active2 = null))
+        assertEquals(ForegroundAction.NONE, verified(event = target, active = target, active2 = null))
+    }
+
+    @Test
+    fun withoutAnActiveWindowTheOlderTimingRulesStillApply() {
+        assertEquals(ForegroundAction.NONE, verified(event = target, active = null))
+        assertEquals(ForegroundAction.NONE, verified(event = launcher, active = null, showing = true))
+    }
+
     @Test
     fun withoutASessionNothingIsBlockedAndAnyBlockIsRemoved() {
         assertEquals(ForegroundAction.NONE, decide(target, active = null))
