@@ -40,6 +40,7 @@
     <string name="goal_clear_result">Clear result</string>
     <string name="goal_tick_pending">%1$s, not ticked. Tap to tick, hold for more.</string>
     <string name="goal_tick_done">%1$s, kept. Tap to untick, hold for more.</string>
+    <string name="goal_tick_minimum">%1$s, kept at the minimum. Tap to mark as fully done, hold for more.</string>
     <string name="goal_tick_failed">%1$s, missed. Tap to mark as kept, hold for more.</string>
 
     <string name="goals_title">Goals</string>

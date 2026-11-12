@@ -74,7 +74,7 @@ fun GoalCard(item: DayItem, editable: Boolean, onAction: (CheckAction) -> Unit, 
                     textDecoration = if (isFailed) TextDecoration.LineThrough else null,
                     color = when (item.status) {
                         DayStatus.FAILED -> status.failed
-                        DayStatus.DONE -> scheme.onSurfaceVariant
+                        DayStatus.DONE, DayStatus.MINIMUM -> scheme.onSurfaceVariant
                         DayStatus.PENDING -> scheme.onSurface
                     },
                 )
@@ -115,6 +115,7 @@ private fun TickWithMenu(item: DayItem, editable: Boolean, onAction: (CheckActio
         when (item.status) {
             DayStatus.PENDING -> R.string.goal_tick_pending
             DayStatus.DONE -> R.string.goal_tick_done
+            DayStatus.MINIMUM -> R.string.goal_tick_minimum
             DayStatus.FAILED -> R.string.goal_tick_failed
         },
         item.goal.name,

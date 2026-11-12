@@ -181,7 +181,7 @@ private fun dialArc(item: DayItem): DialArc? {
     val window = item.goal.schedule.window ?: return null
     val tone = when {
         item.status == DayStatus.FAILED -> DialTone.MISSED
-        item.status == DayStatus.DONE -> DialTone.KEPT
+        item.status == DayStatus.DONE || item.status == DayStatus.MINIMUM -> DialTone.KEPT
         item.section == DaySection.NOW || item.section == DaySection.OVERDUE -> DialTone.OPEN
         else -> DialTone.IDLE
     }

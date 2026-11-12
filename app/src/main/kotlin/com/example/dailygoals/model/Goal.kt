@@ -11,4 +11,6 @@ data class Goal(
     val state: GoalState = GoalState.ACTIVE,
     val sortOrder: Int = 0,
     val schedule: GoalSchedule,
+    val discipline: GoalDiscipline = GoalDiscipline(),
+    val measurement: GoalMeasurement = GoalMeasurement(),
 )

@@ -34,6 +34,7 @@ fun TickMark(
 ) {
     val accent = accentBrush
     val failed = LocalStatusColors.current.failed
+    val pending = LocalStatusColors.current.pending
     val idleRing = MaterialTheme.colorScheme.onSurfaceVariant
     val idleTick = MaterialTheme.colorScheme.outline
     val doneTick = MaterialTheme.colorScheme.onSurface
@@ -59,6 +60,10 @@ fun TickMark(
             DayStatus.DONE -> {
                 drawLogoRing(logo, accent)
                 drawPath(logo.tick, doneTick, style = logo.stroke)
+            }
+            DayStatus.MINIMUM -> {
+                drawLogoRing(logo, SolidColor(pending))
+                drawPath(logo.tick, pending, style = logo.stroke)
             }
             DayStatus.PENDING -> {
                 drawLogoRing(logo, SolidColor(idleRing))

@@ -7,7 +7,9 @@ import com.example.dailygoals.engine.Clock
 import java.time.LocalDateTime
 
 class SkritiApp : Application() {
-    val clock: Clock = Clock { LocalDateTime.now() }
+    val clock: Clock = object : Clock {
+        override fun now(): LocalDateTime = LocalDateTime.now()
+    }
 
     val repository: GoalRepository by lazy {
         val database = AppDatabase.create(this)
