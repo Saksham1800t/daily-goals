@@ -37,6 +37,17 @@ fun GoalSentence(form: GoalFormState, modifier: Modifier = Modifier) {
     val shownName = if (form.type == GoalType.DO) name.replaceFirstChar(Char::lowercase) else "“$name”"
     val days = daysPhrase(form.frequency, form.days)
     val window = windowPhrase(form.window)
+    val rules = buildList {
+        if (form.discipline.failOnWindowEnd) add(stringResource(R.string.sentence_fail_window))
+        if (form.discipline.failOnDayEnd) add(stringResource(R.string.sentence_fail_day))
+        if (form.discipline.failOnManual) add(stringResource(R.string.sentence_fail_manual))
+    }
+    val measurement = form.measurement
+    val amountPhrase = if (measurement.isAmount && measurement.target > 0) {
+        stringResource(R.string.sentence_amount, measurement.target, measurement.unit.ifBlank { "…" }, measurement.minimum)
+    } else {
+        null
+    }
     val sentence = buildAnnotatedString {
         append(opening)
         append(' ')
@@ -46,6 +57,18 @@ fun GoalSentence(form: GoalFormState, modifier: Modifier = Modifier) {
         append(", ")
         withStyle(highlight) { append(window) }
         append('.')
+        if (amountPhrase != null) {
+            append(' ')
+            withStyle(highlight) { append(amountPhrase) }
+            append('.')
+        }
+        if (rules.isNotEmpty()) {
+            append(' ')
+            append(stringResource(R.string.sentence_fails_if))
+            append(' ')
+            withStyle(highlight) { append(rules.joinToString(stringResource(R.string.sentence_or))) }
+            append('.')
+        }
     }
     val shape = RoundedCornerShape(22.dp)
     Text(

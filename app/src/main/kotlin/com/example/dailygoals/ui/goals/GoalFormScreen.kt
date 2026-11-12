@@ -102,7 +102,7 @@ fun GoalFormScreen(viewModel: GoalFormViewModel, onClose: () -> Unit, modifier: 
                     GoalType.AVOID to stringResource(R.string.form_type_avoid),
                 ),
                 selected = form.type,
-                onSelect = { type -> viewModel.edit { it.copy(type = type) } },
+                onSelect = viewModel::chooseType,
             )
             HelpText(if (form.type == GoalType.DO) R.string.form_type_do_help else R.string.form_type_avoid_help)
         }
@@ -146,6 +146,9 @@ fun GoalFormScreen(viewModel: GoalFormViewModel, onClose: () -> Unit, modifier: 
             }
         }
 
+        FailureRulesField(form, viewModel)
+        MeasurementField(form, viewModel)
+
         if (form.isEdit) {
             TextButton(onClick = { confirmDelete = true }, modifier = Modifier.padding(top = 8.dp)) {
                 Text(stringResource(R.string.form_delete), color = LocalStatusColors.current.failed)
@@ -172,7 +175,7 @@ fun GoalFormScreen(viewModel: GoalFormViewModel, onClose: () -> Unit, modifier: 
 }
 
 @Composable
-private fun Field(label: Int, content: @Composable () -> Unit) {
+internal fun Field(label: Int, content: @Composable () -> Unit) {
     Column(Modifier.padding(top = 18.dp)) {
         SectionLabel(stringResource(label), Modifier.padding(bottom = 8.dp))
         content()
@@ -180,7 +183,7 @@ private fun Field(label: Int, content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun HelpText(text: Int) {
+internal fun HelpText(text: Int) {
     Text(
         text = stringResource(text),
         fontSize = 12.5.sp,
@@ -190,7 +193,7 @@ private fun HelpText(text: Int) {
 }
 
 @Composable
-private fun ErrorText(errors: Set<GoalError>, error: GoalError, text: Int) {
+internal fun ErrorText(errors: Set<GoalError>, error: GoalError, text: Int) {
     if (error !in errors) return
     Text(
         text = stringResource(text),
@@ -230,7 +233,7 @@ private fun DayPicker(selected: Set<DayOfWeek>, onToggle: (DayOfWeek) -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun TimeBox(label: Int, dialogTitle: Int, minute: Int, modifier: Modifier, onPicked: (Int) -> Unit) {
+internal fun TimeBox(label: Int, dialogTitle: Int, minute: Int, modifier: Modifier, onPicked: (Int) -> Unit) {
     val scheme = MaterialTheme.colorScheme
     var open by rememberSaveable { mutableStateOf(false) }
     Column(

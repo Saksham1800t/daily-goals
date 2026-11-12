@@ -12,8 +12,11 @@ import com.example.dailygoals.engine.GoalError
 import com.example.dailygoals.engine.GoalValidator
 import com.example.dailygoals.model.Frequency
 import com.example.dailygoals.model.Goal
+import com.example.dailygoals.model.GoalDiscipline
+import com.example.dailygoals.model.GoalMeasurement
 import com.example.dailygoals.model.GoalSchedule
 import com.example.dailygoals.model.GoalType
+import com.example.dailygoals.model.MeasureType
 import com.example.dailygoals.model.TimeWindow
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -32,13 +35,42 @@ data class GoalFormState(
     val hasWindow: Boolean = false,
     val startMinute: Int = DEFAULT_START_MINUTE,
     val endMinute: Int = DEFAULT_END_MINUTE,
+    val graceMinutes: Int = GoalSchedule.DEFAULT_GRACE_MINUTES,
+    val failOnWindowEnd: Boolean = true,
+    val failOnDayEnd: Boolean = false,
+    val failOnManual: Boolean = false,
+    val isAmount: Boolean = false,
+    val unit: String = "",
+    val targetText: String = "",
+    val minimumText: String = "",
+    val minimumLabel: String = "",
     val errors: Set<GoalError> = emptySet(),
     val original: Goal? = null,
 ) {
     val isEdit: Boolean get() = goalId != 0L
     val window: TimeWindow? get() = if (hasWindow) TimeWindow(startMinute, endMinute) else null
 
-    fun schedule(startDate: LocalDate) = GoalSchedule(frequency, days, window, original?.schedule?.startDate ?: startDate)
+    /** A rule that needs a window is switched off while the goal has none. */
+    val discipline: GoalDiscipline
+        get() = GoalDiscipline(failOnWindowEnd && hasWindow, failOnDayEnd, failOnManual)
+
+    val measurement: GoalMeasurement
+        get() = if (isAmount) {
+            GoalMeasurement(MeasureType.AMOUNT, unit.trim(), targetText.toIntOrNull() ?: 0, minimumText.toIntOrNull() ?: 0)
+        } else {
+            GoalMeasurement(MeasureType.CHECK, minimumLabel = minimumLabel.trim().ifEmpty { null })
+        }
+
+    fun schedule(startDate: LocalDate): GoalSchedule {
+        val kept = original?.schedule
+        return (kept ?: GoalSchedule(startDate = startDate)).copy(
+            frequency = frequency,
+            activeDays = days,
+            window = window,
+            startDate = kept?.startDate ?: startDate,
+            graceMinutes = graceMinutes,
+        )
+    }
 
     private companion object {
         const val DEFAULT_START_MINUTE = 6 * 60
@@ -66,6 +98,15 @@ class GoalFormViewModel(private val repository: GoalRepository, private val cloc
                     hasWindow = window != null,
                     startMinute = window?.startMinute ?: current.startMinute,
                     endMinute = window?.endMinute ?: current.endMinute,
+                    graceMinutes = goal.schedule.graceMinutes,
+                    failOnWindowEnd = goal.discipline.failOnWindowEnd,
+                    failOnDayEnd = goal.discipline.failOnDayEnd,
+                    failOnManual = goal.discipline.failOnManual,
+                    isAmount = goal.measurement.isAmount,
+                    unit = goal.measurement.unit,
+                    targetText = if (goal.measurement.isAmount) goal.measurement.target.toString() else "",
+                    minimumText = if (goal.measurement.isAmount) goal.measurement.minimum.toString() else "",
+                    minimumLabel = goal.measurement.minimumLabel.orEmpty(),
                     original = goal,
                 )
             }
@@ -84,6 +125,15 @@ class GoalFormViewModel(private val repository: GoalRepository, private val cloc
         }
     }
 
+    /** A new avoid goal starts with the rules that suit it; the user can still change them. */
+    fun chooseType(type: GoalType) = edit {
+        if (it.isEdit) {
+            it.copy(type = type)
+        } else {
+            it.copy(type = type, failOnDayEnd = type == GoalType.AVOID, failOnManual = type == GoalType.AVOID)
+        }
+    }
+
     private var saving = false
 
     fun save(onSaved: () -> Unit) {
@@ -95,9 +145,13 @@ class GoalFormViewModel(private val repository: GoalRepository, private val cloc
             return
         }
         saving = true
-        val schedule = form.schedule(clock.now().toLocalDate())
-        val goal = form.original?.copy(name = form.name.trim(), type = form.type, schedule = schedule)
-            ?: Goal(name = form.name.trim(), type = form.type, schedule = schedule)
+        val goal = (form.original ?: Goal(name = "", schedule = form.schedule(clock.now().toLocalDate()))).copy(
+            name = form.name.trim(),
+            type = form.type,
+            schedule = form.schedule(clock.now().toLocalDate()),
+            discipline = form.discipline,
+            measurement = form.measurement,
+        )
         viewModelScope.launch {
             repository.save(goal)
             saving = false
@@ -113,8 +167,13 @@ class GoalFormViewModel(private val repository: GoalRepository, private val cloc
         }
     }
 
-    private fun validate(form: GoalFormState): Set<GoalError> =
-        GoalValidator.validateName(form.name) + GoalValidator.validateSchedule(form.schedule(clock.now().toLocalDate()))
+    private fun validate(form: GoalFormState): Set<GoalError> {
+        val schedule = form.schedule(clock.now().toLocalDate())
+        return GoalValidator.validateName(form.name) +
+            GoalValidator.validateSchedule(schedule) +
+            GoalValidator.validateDiscipline(form.discipline, schedule) +
+            GoalValidator.validateMeasurement(form.measurement)
+    }
 
     companion object {
         val Factory = viewModelFactory {
