@@ -3,9 +3,11 @@ package com.example.dailygoals.blocker
 import android.accessibilityservice.AccessibilityService
 import android.content.Intent
 import android.graphics.PixelFormat
+import android.media.AudioManager
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
@@ -43,7 +45,7 @@ class BlockerService : AccessibilityService() {
             passThrough = passThroughPackages(),
         )
         if (pkg != lastPackage || action != ForegroundAction.NONE) {
-            store.log("front: $pkg (event age ${received - event.eventTime} ms) -> $action")
+            store.log("front: $pkg ${event.className} (event age ${received - event.eventTime} ms) -> $action")
         }
         lastPackage = pkg
         when (action) {
@@ -58,7 +60,24 @@ class BlockerService : AccessibilityService() {
         runCatching { getSystemService(InputMethodManager::class.java).enabledInputMethodList.forEach { add(it.packageName) } }
     }
 
+    /**
+     * A block covers the screen but does not silence the app behind it, so a video keeps playing. Sending
+     * the media pause key to whatever is playing is the closest allowed way to stop the sound.
+     */
+    private fun pauseMedia() {
+        val audio = getSystemService(AudioManager::class.java)
+        if (!audio.isMusicActive) return
+        val now = SystemClock.uptimeMillis()
+        runCatching {
+            audio.dispatchMediaKeyEvent(KeyEvent(now, now, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PAUSE, 0))
+            audio.dispatchMediaKeyEvent(KeyEvent(now, now, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PAUSE, 0))
+        }.onFailure { store.log("pause key failed: ${it.javaClass.simpleName}") }
+        store.log("pause key sent while sound was playing")
+        handler.postDelayed({ store.log("sound still playing after the pause key: ${audio.isMusicActive}") }, PAUSE_CHECK_MILLIS)
+    }
+
     private fun show(received: Long) {
+        if (store.pauseMedia) pauseMedia()
         when (store.method) {
             BlockMethod.ACTIVITY -> launchActivity(received, thenHome = false)
             BlockMethod.OVERLAY -> showOverlay(received)
@@ -144,6 +163,7 @@ class BlockerService : AccessibilityService() {
     companion object {
         private const val HOME_DELAY_MILLIS = 2500L
         private const val LAUNCH_CHECK_MILLIS = 700L
+        private const val PAUSE_CHECK_MILLIS = 800L
 
         @Volatile
         var instance: BlockerService? = null

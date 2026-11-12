@@ -26,6 +26,11 @@ class PocStore(context: Context) {
         get() = runCatching { BlockMethod.valueOf(prefs.getString(KEY_METHOD, null).orEmpty()) }.getOrDefault(BlockMethod.OVERLAY)
         set(value) = prefs.edit().putString(KEY_METHOD, value.name).apply()
 
+    /** Whether to press pause on whatever is playing when the block appears, so the blocked app goes quiet too. */
+    var pauseMedia: Boolean
+        get() = prefs.getBoolean(KEY_PAUSE_MEDIA, true)
+        set(value) = prefs.edit().putBoolean(KEY_PAUSE_MEDIA, value).apply()
+
     fun session(): BlockSession? {
         if (!prefs.getBoolean(KEY_ACTIVE, false)) return null
         val until = prefs.getLong(KEY_UNTIL, NO_END)
@@ -68,6 +73,7 @@ class PocStore(context: Context) {
         private const val KEY_TARGET = "target"
         private const val KEY_METHOD = "method"
         private const val KEY_ACTIVE = "active"
+        private const val KEY_PAUSE_MEDIA = "pause_media"
         private const val KEY_UNTIL = "until"
         private const val NO_END = -1L
         private const val MILLIS_PER_MINUTE = 60_000L
