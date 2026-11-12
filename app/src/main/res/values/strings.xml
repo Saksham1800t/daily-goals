@@ -4,6 +4,32 @@
 
     <string name="tab_today">Today</string>
     <string name="tab_goals">Goals</string>
+    <string name="tab_settings">Settings</string>
+
+    <string name="settings_title">Settings</string>
+    <string name="settings_day">Day</string>
+    <string name="settings_day_end">Day-end time</string>
+    <string name="settings_day_end_label">Day ends at</string>
+    <string name="settings_day_end_help">Goals with the day-end rule that are still unticked at this time count as failed.</string>
+    <string name="settings_scoring">Scoring</string>
+    <string name="settings_weight">Weight of a minimum</string>
+    <string name="settings_weight_help">How much a goal kept at its minimum counts towards the day\'s percentage. A full goal counts 100%.</string>
+    <string name="settings_backup">Backup</string>
+    <string name="settings_backup_help">Your data stays on this phone. Save a backup file to restore it after a reinstall or on another phone.</string>
+    <string name="settings_export_json">Export all data</string>
+    <string name="settings_export_csv">Export CSV</string>
+    <string name="settings_restore">Restore backup</string>
+    <string name="settings_export_done">Saved.</string>
+    <string name="settings_restore_title">Restore this backup?</string>
+    <string name="settings_restore_counts">The backup has %1$d goals and %2$d recorded days. Merge keeps what is on this phone and adds the rest. Replace removes what is here first.</string>
+    <string name="settings_restore_merge">Merge</string>
+    <string name="settings_restore_replace">Replace</string>
+    <string name="settings_restore_done">Backup restored.</string>
+    <string name="settings_time_travel">Time shift (testing)</string>
+    <string name="settings_time_travel_now">The app thinks it is %1$s</string>
+    <string name="settings_time_travel_help">Moves the app\'s clock so windows, day ends and week ends can be checked without waiting. Only in test builds.</string>
+    <string name="settings_time_travel_reset">Back to real time</string>
+    <string name="settings_reinstall">Uninstalling the app deletes all of its data. Save a backup first if you want to keep your history.</string>
 
     <string name="day_today">Today</string>
     <string name="day_yesterday">Yesterday</string>
@@ -90,6 +116,67 @@
     <string name="sentence_day_range">%1$s to %2$s</string>
     <string name="sentence_all_day">all day</string>
     <string name="sentence_between">between %1$s and %2$s</string>
+
+    <string name="quota_week">%1$d of %2$d this week</string>
+    <string name="quota_month">%1$d of %2$d this month</string>
+    <string name="goal_late">Ticked %1$d min late</string>
+    <string name="goal_missed_window">Missed: the window ended</string>
+    <string name="goal_missed_day">Missed: the day ended without a tick</string>
+    <string name="goal_minimum_chip">Minimum: %1$s</string>
+    <string name="goal_minimum_kept">Minimum kept: %1$s</string>
+    <string name="goal_minimum_reached">minimum reached</string>
+    <string name="goal_log_chip">+%1$d</string>
+    <string name="goal_log_custom">Custom</string>
+    <string name="goal_log_undo">Undo</string>
+    <string name="goal_log_custom_title">Add how many %1$s?</string>
+    <string name="goal_timer_start">Start timer</string>
+    <string name="goal_timer_stop">Stop · %1$d min</string>
+    <string name="consistency_summary">consistency · last 30 days: %1$d of %2$d</string>
+    <string name="consistency_streaks">Best streak %1$d · current %2$d</string>
+    <string name="consistency_broken">Streak ended. Best streak %1$d, consistency %2$d%%.</string>
+    <string name="consistency_minimum_days">%1$d of those days at the minimum</string>
+    <string name="day_percent">%1$d%% complete</string>
+    <string name="banner_title">%1$s was missed</string>
+    <string name="banner_window">The window closed at %1$s and the grace time has run out.</string>
+    <string name="banner_day">The day ended without a tick.</string>
+    <string name="banner_did_it">I did do it</string>
+    <string name="banner_dismiss">Dismiss</string>
+
+    <string name="sentence_fails_if">It counts as failed if</string>
+    <string name="sentence_or"> or </string>
+    <string name="sentence_fail_window">the window ends without a tick</string>
+    <string name="sentence_fail_day">the day ends without a tick</string>
+    <string name="sentence_fail_manual">I press \"I failed\"</string>
+    <string name="sentence_amount">The target is %1$d %2$s with %3$d as the minimum</string>
+
+    <string name="form_fail_rules">Counts as failed when</string>
+    <string name="rule_window_end">The window ends without a tick</string>
+    <string name="rule_window_end_help">At %1$s plus %2$d minutes of grace</string>
+    <string name="rule_day_end">The day ends without a tick</string>
+    <string name="rule_day_end_help">At the day-end time in Settings</string>
+    <string name="rule_manual">I press \"I failed\"</string>
+    <string name="rule_manual_help">Shows an \"I failed\" button on the goal</string>
+    <string name="form_grace">Grace after the window ends</string>
+    <string name="form_grace_minutes">%1$d min</string>
+    <string name="form_grace_help">Ticking inside the grace time still counts as done and is noted as late.</string>
+    <string name="error_rule_needs_window">This rule needs a time window.</string>
+
+    <string name="form_measure">How you track it</string>
+    <string name="measure_check">Tick it off</string>
+    <string name="measure_amount">Count an amount</string>
+    <string name="measure_unit">Unit</string>
+    <string name="measure_unit_hint">minutes, pages, glasses</string>
+    <string name="measure_target">Target</string>
+    <string name="measure_minimum">Minimum</string>
+    <string name="measure_amount_help">Reaching the minimum still counts as kept. Below it the goal counts as failed when a rule fires. Counting in minutes adds a timer.</string>
+    <string name="measure_minimum_label">Minimum version (optional)</string>
+    <string name="measure_minimum_label_hint">For example: put on shoes and walk 5 minutes</string>
+    <string name="measure_minimum_label_help">A smaller version of the goal that still counts as kept on a bad day.</string>
+    <string name="error_unit_blank">Name the unit, for example minutes.</string>
+    <string name="error_target">The target must be at least 1.</string>
+    <string name="error_minimum_invalid">The minimum must be at least 1.</string>
+    <string name="error_minimum_above_target">The minimum cannot be above the target.</string>
+    <string name="error_label_too_long">Keep the minimum description to 60 characters or fewer.</string>
 
     <string name="calendar_previous_month">Previous month</string>
     <string name="calendar_next_month">Next month</string>
