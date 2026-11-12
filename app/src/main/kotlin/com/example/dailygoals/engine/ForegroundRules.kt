@@ -10,6 +10,12 @@ enum class ForegroundAction { SHOW_BLOCK, HIDE_BLOCK, NONE }
  * never what is on screen.
  */
 object ForegroundRules {
+    /**
+     * Opening an app from the recents screen makes the launcher report itself a moment after the app.
+     * Within this time of a block appearing, a launcher event is not taken as leaving the app.
+     */
+    const val LAUNCHER_GRACE_MILLIS = 1000L
+
     fun isActive(session: BlockSession?, nowMillis: Long): Boolean =
         session != null && (session.untilMillis == null || nowMillis < session.untilMillis)
 
@@ -25,10 +31,14 @@ object ForegroundRules {
         blockShowing: Boolean,
         nowMillis: Long,
         passThrough: Set<String>,
+        launcherPackages: Set<String> = emptySet(),
+        millisSinceShown: Long = Long.MAX_VALUE,
     ): ForegroundAction {
         if (!isActive(session, nowMillis)) return if (blockShowing) ForegroundAction.HIDE_BLOCK else ForegroundAction.NONE
         if (foregroundPackage == ownPackage || foregroundPackage in passThrough) return ForegroundAction.NONE
         if (foregroundPackage == session?.targetPackage) return if (blockShowing) ForegroundAction.NONE else ForegroundAction.SHOW_BLOCK
-        return if (blockShowing) ForegroundAction.HIDE_BLOCK else ForegroundAction.NONE
+        if (!blockShowing) return ForegroundAction.NONE
+        val launcherTransition = foregroundPackage in launcherPackages && millisSinceShown < LAUNCHER_GRACE_MILLIS
+        return if (launcherTransition) ForegroundAction.NONE else ForegroundAction.HIDE_BLOCK
     }
 }

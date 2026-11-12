@@ -47,6 +47,36 @@ class ForegroundRulesTest {
         assertEquals(ForegroundAction.NONE, decide("com.android.systemui", showing = false))
     }
 
+    private val launcher = "com.motorola.launcher3"
+
+    private fun decideAfterShow(pkg: String, sinceShown: Long, showing: Boolean = true) = ForegroundRules.decide(
+        pkg, own, session, showing, 1_000, passThrough, launcherPackages = setOf(launcher), millisSinceShown = sinceShown,
+    )
+
+    @Test
+    fun aLauncherEventRightAfterTheBlockAppearsIsTheRecentsTransitionNotALeave() {
+        assertEquals(ForegroundAction.NONE, decideAfterShow(launcher, sinceShown = 230))
+        assertEquals(ForegroundAction.NONE, decideAfterShow(launcher, sinceShown = 999))
+    }
+
+    @Test
+    fun aLauncherEventAfterTheGraceTimeRemovesTheBlock() {
+        assertEquals(ForegroundAction.HIDE_BLOCK, decideAfterShow(launcher, sinceShown = ForegroundRules.LAUNCHER_GRACE_MILLIS))
+        assertEquals(ForegroundAction.HIDE_BLOCK, decideAfterShow(launcher, sinceShown = 5_000))
+    }
+
+    @Test
+    fun anotherAppStillRemovesTheBlockEvenInsideTheGraceTime() {
+        assertEquals(ForegroundAction.HIDE_BLOCK, decideAfterShow("com.google.android.googlequicksearchbox", sinceShown = 100))
+        assertEquals(ForegroundAction.HIDE_BLOCK, decideAfterShow("com.google.android.youtube.music", sinceShown = 100))
+    }
+
+    @Test
+    fun theGraceTimeNeverShowsABlockOrKeepsOneThatIsNotUp() {
+        assertEquals(ForegroundAction.NONE, decideAfterShow(launcher, sinceShown = 100, showing = false))
+        assertEquals(ForegroundAction.SHOW_BLOCK, decideAfterShow(target, sinceShown = 100, showing = false))
+    }
+
     @Test
     fun withoutASessionNothingIsBlockedAndAnyBlockIsRemoved() {
         assertEquals(ForegroundAction.NONE, decide(target, active = null))
