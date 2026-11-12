@@ -7,8 +7,11 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.dailygoals.SkritiApp
 import com.example.dailygoals.data.GoalRepository
+import com.example.dailygoals.data.SettingsStore
 import com.example.dailygoals.engine.CheckAction
 import com.example.dailygoals.engine.Clock
+import com.example.dailygoals.engine.Consistency
+import com.example.dailygoals.engine.ConsistencyStats
 import com.example.dailygoals.engine.DayPlan
 import com.example.dailygoals.engine.DayPlanner
 import com.example.dailygoals.engine.DaySummary
@@ -27,7 +30,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -37,12 +39,19 @@ data class DayUiState(
     val week: List<LocalDate>,
     val weekSummaries: Map<LocalDate, DaySummary>,
     val hasActiveGoals: Boolean,
+    val stats: Map<Long, ConsistencyStats>,
+    val timers: Map<Long, Long>,
+    val minimumWeightPercent: Int,
 ) {
     val today: LocalDate get() = now.toLocalDate()
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class DayViewModel(private val repository: GoalRepository, private val clock: Clock) : ViewModel() {
+class DayViewModel(
+    private val repository: GoalRepository,
+    private val settings: SettingsStore,
+    private val clock: Clock,
+) : ViewModel() {
     /** Null follows today, so the screen rolls over at midnight instead of staying on yesterday. */
     private val pickedDate = MutableStateFlow<LocalDate?>(null)
 
@@ -60,23 +69,33 @@ class DayViewModel(private val repository: GoalRepository, private val clock: Cl
     val state: StateFlow<DayUiState?> = selection
         .flatMapLatest { (time, date) ->
             val week = Weeks.weekOf(date)
-            combine(repository.goals, repository.checkIns(week.first(), week.last())) { goals, checkIns ->
+            combine(repository.goals, repository.checkIns, repository.timers, settings.settings) { goals, checkIns, timers, current ->
+                val byGoal = checkIns.groupBy { it.goalId }
+                val neutral = repository.neutralDates()
                 DayUiState(
                     now = time,
                     plan = DayPlanner.plan(goals, checkIns, date, time),
                     week = week,
                     weekSummaries = DayPlanner.summaries(goals, checkIns, week),
                     hasActiveGoals = goals.any { it.state == GoalState.ACTIVE },
+                    stats = goals.filter { it.state == GoalState.ACTIVE }.associate { goal ->
+                        val statuses = byGoal[goal.id].orEmpty().associate { it.date to it.status }
+                        goal.id to Consistency.forGoal(goal, statuses, time.toLocalDate(), neutral)
+                    },
+                    timers = timers,
+                    minimumWeightPercent = current.minimumWeightPercent,
                 )
             }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), null)
 
+    init {
+        viewModelScope.launch { now.collect { repository.evaluate() } }
+    }
+
     fun monthSummaries(month: YearMonth): Flow<Map<LocalDate, DaySummary>> {
         val days = List(month.lengthOfMonth()) { month.atDay(it + 1) }
-        return combine(repository.goals, repository.checkIns(days.first(), days.last())) { goals, checkIns ->
-            DayPlanner.summaries(goals, checkIns, days)
-        }
+        return combine(repository.goals, repository.checkIns) { goals, checkIns -> DayPlanner.summaries(goals, checkIns, days) }
     }
 
     fun select(date: LocalDate) {
@@ -87,6 +106,20 @@ class DayViewModel(private val repository: GoalRepository, private val clock: Cl
         viewModelScope.launch { repository.applyAction(goalId, date, action) }
     }
 
+    fun log(goalId: Long, date: LocalDate, delta: Int) {
+        viewModelScope.launch { repository.logAmount(goalId, date, delta) }
+    }
+
+    fun undoLog(goalId: Long, date: LocalDate) {
+        viewModelScope.launch { repository.undoLastLog(goalId, date) }
+    }
+
+    fun startTimer(goalId: Long) = repository.startTimer(goalId)
+
+    fun stopTimer(goalId: Long) {
+        viewModelScope.launch { repository.stopTimer(goalId) }
+    }
+
     companion object {
         private const val SECONDS_PER_MINUTE = 60
         private const val MILLIS_PER_SECOND = 1000L
@@ -95,7 +128,7 @@ class DayViewModel(private val repository: GoalRepository, private val clock: Cl
         val Factory = viewModelFactory {
             initializer {
                 val app = this[APPLICATION_KEY] as SkritiApp
-                DayViewModel(app.repository, app.clock)
+                DayViewModel(app.repository, app.settings, app.clock)
             }
         }
     }

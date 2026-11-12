@@ -3,6 +3,8 @@ package com.example.dailygoals.ui.day
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,31 +13,46 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.dailygoals.R
+import com.example.dailygoals.engine.AmountRules
 import com.example.dailygoals.engine.CheckAction
+import com.example.dailygoals.engine.ConsistencyStats
 import com.example.dailygoals.engine.DayItem
 import com.example.dailygoals.engine.DaySection
+import com.example.dailygoals.engine.Level
+import com.example.dailygoals.engine.QuickLog
+import com.example.dailygoals.engine.TimerRules
 import com.example.dailygoals.model.DayStatus
+import com.example.dailygoals.model.FailReason
+import com.example.dailygoals.model.Frequency
 import com.example.dailygoals.model.GoalType
 import com.example.dailygoals.ui.components.TickMark
 import com.example.dailygoals.ui.theme.LocalStatusColors
@@ -43,8 +60,23 @@ import com.example.dailygoals.ui.windowText
 
 private const val MISSED_BORDER_ALPHA = 0.6f
 
+class CardActions(
+    val onAction: (CheckAction) -> Unit,
+    val onLog: (Int) -> Unit,
+    val onUndo: () -> Unit,
+    val onTimerToggle: () -> Unit,
+)
+
 @Composable
-fun GoalCard(item: DayItem, editable: Boolean, onAction: (CheckAction) -> Unit, modifier: Modifier = Modifier) {
+fun GoalCard(
+    item: DayItem,
+    editable: Boolean,
+    stats: ConsistencyStats?,
+    timerStart: Long?,
+    nowMillis: Long,
+    actions: CardActions,
+    modifier: Modifier = Modifier,
+) {
     val scheme = MaterialTheme.colorScheme
     val status = LocalStatusColors.current
     val goal = item.goal
@@ -84,14 +116,27 @@ fun GoalCard(item: DayItem, editable: Boolean, onAction: (CheckAction) -> Unit, 
                     fontSize = 13.sp,
                     color = scheme.onSurfaceVariant,
                 )
+                Notes(item)
             }
-            TickWithMenu(item, editable, onAction)
+            TickWithMenu(item, editable, actions.onAction)
         }
         val minutesLeft = item.minutesLeft
         if (minutesLeft != null && window != null) {
             Countdown(minutesLeft, minutesLeft.toFloat() / (window.endMinute - window.startMinute))
         }
-        if (editable && goal.type == GoalType.AVOID && item.status == DayStatus.PENDING) {
+        if (goal.measurement.isAmount) {
+            AmountSection(item, editable, timerStart, nowMillis, actions)
+        } else if (goal.measurement.hasMinimumStep && editable && item.status != DayStatus.FAILED && item.status != DayStatus.DONE) {
+            val label = goal.measurement.minimumLabel.orEmpty()
+            val kept = item.status == DayStatus.MINIMUM
+            ActionChip(
+                text = stringResource(if (kept) R.string.goal_minimum_kept else R.string.goal_minimum_chip, label),
+                onClick = { actions.onAction(CheckAction.MARK_MINIMUM) },
+                highlighted = kept,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+        }
+        if (editable && goal.discipline.failOnManual && item.status == DayStatus.PENDING) {
             Text(
                 text = stringResource(R.string.goal_i_failed),
                 color = status.failed,
@@ -101,13 +146,15 @@ fun GoalCard(item: DayItem, editable: Boolean, onAction: (CheckAction) -> Unit, 
                     .padding(top = 8.dp)
                     .clip(CircleShape)
                     .border(1.dp, status.failed, CircleShape)
-                    .clickable(role = Role.Button) { onAction(CheckAction.MARK_FAILED) }
+                    .clickable(role = Role.Button) { actions.onAction(CheckAction.MARK_FAILED) }
                     .padding(horizontal = 14.dp, vertical = 8.dp),
             )
         }
+        if (stats != null && stats.due > 0) ConsistencyLine(stats)
     }
 }
 
+/** Extra lines under the goal name: quota progress, lateness and why an automatic failure happened. */
 @Composable
 private fun TickWithMenu(item: DayItem, editable: Boolean, onAction: (CheckAction) -> Unit) {
     var menuOpen by remember { mutableStateOf(false) }
