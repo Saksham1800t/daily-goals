@@ -12,8 +12,8 @@ android {
         applicationId = "com.example.dailygoals"
         minSdk = 29
         targetSdk = 37
-        versionCode = 2
-        versionName = "0.2.0"
+        versionCode = 3
+        versionName = "0.3.0"
     }
 
     buildFeatures {
@@ -44,4 +44,6 @@ dependencies {
     implementation(libs.compose.material3)
 
     testImplementation(libs.junit)
+    testImplementation(libs.sqlite.jdbc)
+    testImplementation(libs.org.json)
 }
