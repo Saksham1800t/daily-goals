@@ -54,6 +54,11 @@ class SettingsStore(private val prefs: SharedPreferences) {
             .apply()
     }
 
+    /** Whether the first-run permission walkthrough has been shown, so it is offered only once. */
+    fun setupSeen(): Boolean = prefs.getBoolean(KEY_SETUP_SEEN, false)
+
+    fun markSetupSeen() = prefs.edit().putBoolean(KEY_SETUP_SEEN, true).apply()
+
     fun startTimer(goalId: Long, startMillis: Long) = writeTimers(mutableTimers.value + (goalId to startMillis))
 
     fun stopTimer(goalId: Long): Long? {
@@ -85,5 +90,6 @@ class SettingsStore(private val prefs: SharedPreferences) {
         const val KEY_ZONE = "last_zone_id"
         const val KEY_NEUTRAL = "neutral_dates"
         const val KEY_TIMERS = "timers"
+        const val KEY_SETUP_SEEN = "setup_seen"
     }
 }

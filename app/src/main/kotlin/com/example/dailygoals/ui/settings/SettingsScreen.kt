@@ -50,7 +50,7 @@ private const val MINUTES_PER_HOUR = 60L
 private const val MINUTES_PER_DAY = 24 * MINUTES_PER_HOUR
 
 @Composable
-fun SettingsScreen(viewModel: SettingsViewModel, modifier: Modifier = Modifier) {
+fun SettingsScreen(viewModel: SettingsViewModel, onOpenPermissions: () -> Unit, modifier: Modifier = Modifier) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -86,6 +86,11 @@ fun SettingsScreen(viewModel: SettingsViewModel, modifier: Modifier = Modifier) 
 
     Column(modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp)) {
         Text(stringResource(R.string.settings_title), fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
+
+        Group(R.string.settings_warnings) {
+            Text(stringResource(R.string.settings_warnings_help), fontSize = 12.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            SettingsButton(stringResource(R.string.settings_warnings_open), Modifier.padding(top = 10.dp), onOpenPermissions)
+        }
 
         Group(R.string.settings_day) {
             Text(stringResource(R.string.settings_day_end), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)

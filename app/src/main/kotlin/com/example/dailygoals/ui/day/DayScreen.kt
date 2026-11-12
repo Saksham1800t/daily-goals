@@ -20,12 +20,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -35,15 +37,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.dailygoals.R
+import com.example.dailygoals.SkritiApp
 import com.example.dailygoals.engine.CheckAction
 import com.example.dailygoals.engine.DayItem
+import com.example.dailygoals.engine.DeliveryLevel
 import com.example.dailygoals.engine.DayPlan
 import com.example.dailygoals.engine.DaySection
 import com.example.dailygoals.engine.minuteOfDay
 import com.example.dailygoals.model.DayStatus
 import com.example.dailygoals.model.FailReason
+import com.example.dailygoals.model.WarningMode
 import com.example.dailygoals.ui.components.AccentButton
 import com.example.dailygoals.ui.components.AppIconKind
 import com.example.dailygoals.ui.components.DayDial
@@ -58,12 +65,19 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 @Composable
-fun DayScreen(viewModel: DayViewModel, onAddGoal: () -> Unit, modifier: Modifier = Modifier) {
+fun DayScreen(viewModel: DayViewModel, onAddGoal: () -> Unit, onOpenPermissions: () -> Unit, modifier: Modifier = Modifier) {
     val state = viewModel.state.collectAsStateWithLifecycle().value ?: return
     val plan = state.plan
     val isToday = plan.date == state.today
     var calendarOpen by rememberSaveable { mutableStateOf(false) }
     var dismissed by rememberSaveable { mutableStateOf("") }
+    var hintDismissed by rememberSaveable { mutableStateOf(false) }
+    val checker = (LocalContext.current.applicationContext as SkritiApp).permissions
+    var warningsBlocked by remember { mutableStateOf(false) }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        val status = checker.status()
+        warningsBlocked = status.warningLevel == DeliveryLevel.IN_APP || !status.exactAlarms
+    }
     val nowMillis = state.now.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
     val dismissedIds = dismissed.split(',').mapNotNull(String::toLongOrNull).toSet()
     val missedToday = plan.items.filter {
@@ -74,6 +88,9 @@ fun DayScreen(viewModel: DayViewModel, onAddGoal: () -> Unit, modifier: Modifier
         item(key = "header") {
             DayHeader(plan.date, state.today, onOpenCalendar = { calendarOpen = true }, onToday = { viewModel.select(state.today) })
             WeekStrip(state.week, state.weekSummaries, plan.date, state.today, viewModel::select)
+        }
+        if (isToday && warningsBlocked && !hintDismissed && plan.items.any { it.goal.reminder.mode != WarningMode.NONE }) {
+            item(key = "warning-hint") { WarningHint(onOpenPermissions, onDismiss = { hintDismissed = true }) }
         }
         if (isToday) {
             items(missedToday, key = { "banner-${it.goal.id}" }) { item ->
@@ -163,6 +180,28 @@ private fun DayHeader(date: LocalDate, today: LocalDate, onOpenCalendar: () -> U
             )
         }
         IconButtonBox(AppIconKind.CALENDAR, stringResource(R.string.day_open_calendar), onOpenCalendar)
+    }
+}
+
+/** One short, dismissible hint when warnings cannot reach the user as they should. */
+@Composable
+private fun WarningHint(onOpen: () -> Unit, onDismiss: () -> Unit) {
+    val scheme = MaterialTheme.colorScheme
+    val shape = RoundedCornerShape(22.dp)
+    Column(
+        Modifier
+            .padding(bottom = 10.dp)
+            .fillMaxWidth()
+            .clip(shape)
+            .background(scheme.surface)
+            .border(1.dp, LocalStatusColors.current.pending, shape)
+            .padding(14.dp),
+    ) {
+        Text(stringResource(R.string.hint_warnings_blocked), fontSize = 13.5.sp)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 10.dp)) {
+            BannerButton(stringResource(R.string.hint_set_up), onOpen)
+            BannerButton(stringResource(R.string.banner_dismiss), onDismiss)
+        }
     }
 }
 

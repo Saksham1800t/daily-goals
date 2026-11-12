@@ -26,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -33,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.dailygoals.R
+import com.example.dailygoals.SkritiApp
 import com.example.dailygoals.ui.components.AppIcon
 import com.example.dailygoals.ui.components.AppIconKind
 import com.example.dailygoals.ui.day.DayScreen
@@ -41,6 +43,7 @@ import com.example.dailygoals.ui.goals.GoalFormScreen
 import com.example.dailygoals.ui.goals.GoalFormViewModel
 import com.example.dailygoals.ui.goals.GoalsScreen
 import com.example.dailygoals.ui.goals.GoalsViewModel
+import com.example.dailygoals.ui.permissions.PermissionsScreen
 import com.example.dailygoals.ui.settings.SettingsScreen
 import com.example.dailygoals.ui.settings.SettingsViewModel
 import com.example.dailygoals.ui.theme.accentBrush
@@ -64,8 +67,18 @@ fun AppRoot() {
     }
     LaunchedEffect(formGoalId) { formGoalId?.let(formViewModel::ensureOpen) }
 
+    val app = LocalContext.current.applicationContext as SkritiApp
+    var showPermissions by rememberSaveable { mutableStateOf(!app.settings.setupSeen()) }
+    val closePermissions = {
+        app.settings.markSetupSeen()
+        showPermissions = false
+    }
+
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).safeDrawingPadding()) {
-        if (formGoalId != null) {
+        if (showPermissions) {
+            BackHandler(onBack = closePermissions)
+            PermissionsScreen(onClose = closePermissions, modifier = Modifier.weight(1f))
+        } else if (formGoalId != null) {
             BackHandler { formGoalId = null }
             GoalFormScreen(formViewModel, onClose = { formGoalId = null }, modifier = Modifier.weight(1f))
         } else {
@@ -75,13 +88,17 @@ fun AppRoot() {
                     Tab.TODAY -> DayScreen(
                         viewModel = viewModel(factory = DayViewModel.Factory),
                         onAddGoal = { openForm(NEW_GOAL_ID) },
+                        onOpenPermissions = { showPermissions = true },
                     )
                     Tab.GOALS -> GoalsScreen(
                         viewModel = viewModel(factory = GoalsViewModel.Factory),
                         onAdd = { openForm(NEW_GOAL_ID) },
                         onEdit = openForm,
                     )
-                    Tab.SETTINGS -> SettingsScreen(viewModel = viewModel(factory = SettingsViewModel.Factory))
+                    Tab.SETTINGS -> SettingsScreen(
+                        viewModel = viewModel(factory = SettingsViewModel.Factory),
+                        onOpenPermissions = { showPermissions = true },
+                    )
                 }
             }
             BottomBar(tab, onSelect = { tab = it })
