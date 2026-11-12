@@ -78,6 +78,21 @@ class ForegroundRulesTest {
     }
 
     @Test
+    fun theBlockedAppReportingItselfRightAfterSendingHomeIsItsFloatingWindowNotAnOpen() {
+        fun afterHome(sinceHome: Long) = ForegroundRules.decide(target, own, session, false, 1_000, passThrough, millisSinceHome = sinceHome)
+        assertEquals(ForegroundAction.NONE, afterHome(500))
+        assertEquals(ForegroundAction.NONE, afterHome(ForegroundRules.HOME_QUIET_MILLIS - 1))
+        assertEquals(ForegroundAction.SHOW_BLOCK, afterHome(ForegroundRules.HOME_QUIET_MILLIS))
+        assertEquals(ForegroundAction.SHOW_BLOCK, afterHome(Long.MAX_VALUE))
+    }
+
+    @Test
+    fun sendingHomeDoesNotStopOtherAppsFromChangingTheBlock() {
+        val hide = ForegroundRules.decide("com.android.launcher3", own, session, true, 1_000, passThrough, millisSinceHome = 100)
+        assertEquals(ForegroundAction.HIDE_BLOCK, hide)
+    }
+
+    @Test
     fun withoutASessionNothingIsBlockedAndAnyBlockIsRemoved() {
         assertEquals(ForegroundAction.NONE, decide(target, active = null))
         assertEquals(ForegroundAction.HIDE_BLOCK, decide(target, showing = true, active = null))

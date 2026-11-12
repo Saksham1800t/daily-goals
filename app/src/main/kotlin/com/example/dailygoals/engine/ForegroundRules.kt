@@ -16,6 +16,12 @@ object ForegroundRules {
      */
     const val LAUNCHER_GRACE_MILLIS = 1000L
 
+    /**
+     * After the user is sent home, an app such as YouTube shrinks to a floating window and reports itself
+     * again. For this long that report is not taken as the app being opened.
+     */
+    const val HOME_QUIET_MILLIS = 3000L
+
     fun isActive(session: BlockSession?, nowMillis: Long): Boolean =
         session != null && (session.untilMillis == null || nowMillis < session.untilMillis)
 
@@ -33,10 +39,13 @@ object ForegroundRules {
         passThrough: Set<String>,
         launcherPackages: Set<String> = emptySet(),
         millisSinceShown: Long = Long.MAX_VALUE,
+        millisSinceHome: Long = Long.MAX_VALUE,
     ): ForegroundAction {
         if (!isActive(session, nowMillis)) return if (blockShowing) ForegroundAction.HIDE_BLOCK else ForegroundAction.NONE
         if (foregroundPackage == ownPackage || foregroundPackage in passThrough) return ForegroundAction.NONE
-        if (foregroundPackage == session?.targetPackage) return if (blockShowing) ForegroundAction.NONE else ForegroundAction.SHOW_BLOCK
+        if (foregroundPackage == session?.targetPackage) {
+            return if (blockShowing || millisSinceHome < HOME_QUIET_MILLIS) ForegroundAction.NONE else ForegroundAction.SHOW_BLOCK
+        }
         if (!blockShowing) return ForegroundAction.NONE
         val launcherTransition = foregroundPackage in launcherPackages && millisSinceShown < LAUNCHER_GRACE_MILLIS
         return if (launcherTransition) ForegroundAction.NONE else ForegroundAction.HIDE_BLOCK
