@@ -27,6 +27,7 @@ class BlockActivity : ComponentActivity() {
                 onGoHome = ::goHome,
                 onStop = {
                     store.stop()
+                    BlockerWatchdog.cancel(applicationContext)
                     finish()
                 },
             ),

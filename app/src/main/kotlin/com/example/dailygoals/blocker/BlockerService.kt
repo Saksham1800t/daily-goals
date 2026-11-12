@@ -1,12 +1,15 @@
 package com.example.dailygoals.blocker
 
 import android.accessibilityservice.AccessibilityService
+import android.app.PendingIntent
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.pm.ServiceInfo
 import android.graphics.PixelFormat
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
@@ -15,21 +18,26 @@ import android.view.View
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
 import android.view.inputmethod.InputMethodManager
+import androidx.core.app.NotificationCompat
+import androidx.core.app.ServiceCompat
+import com.example.dailygoals.MainActivity
 import com.example.dailygoals.R
 import com.example.dailygoals.SkritiApp
 import com.example.dailygoals.engine.ForegroundAction
 import com.example.dailygoals.engine.ForegroundRules
+import com.example.dailygoals.notify.NotificationChannels
 
 /**
- * Listens only for "a window came to the front" events and reads the package name. It never reads what
- * is on screen. What it does about the blocked app depends on the method under test.
+ * Listens for "a window came to the front" events. For each one it asks Android which window is really
+ * active and reads only its package name, never what is on screen, and decides from that. What it does
+ * about the blocked app depends on the method under test.
  */
 class BlockerService : AccessibilityService() {
     private val handler = Handler(Looper.getMainLooper())
     private val store get() = (application as SkritiApp).pocStore
     private var overlay: View? = null
-    private var shownAtUptime = 0L
     private var homeSentAtUptime = Long.MIN_VALUE / 2
+    private var shownAtUptime = 0L
     private var focusRequest: AudioFocusRequest? = null
     private var focusTried = false
     private var launchers: Set<String> = emptySet()
@@ -38,34 +46,64 @@ class BlockerService : AccessibilityService() {
     override fun onServiceConnected() {
         instance = this
         store.log("service connected")
+        if (store.keepAlive) startKeepAlive()
+        if (store.session() != null) BlockerWatchdog.schedule(this)
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
         if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
-        val received = SystemClock.uptimeMillis()
         val pkg = event.packageName?.toString() ?: return
+        evaluate(pkg, event.className, event.eventTime, attempt = 0)
+    }
+
+    /**
+     * The package in a window event is not proof that the app is in front: a floating window or a
+     * launcher animation reports itself too. The active window is read at the moment of the event and
+     * decides. Android sometimes has not updated it yet, so an empty answer is retried a few times.
+     */
+    private fun evaluate(pkg: String, className: CharSequence?, eventTime: Long, attempt: Int) {
+        val session = store.session()
+        val showing = overlay != null || BlockActivity.isShowing()
+        if (session == null && !showing) return
+        val active = activeWindowPackage()
+        if (active == null && attempt < MAX_ACTIVE_RETRIES && (pkg == session?.targetPackage || showing)) {
+            handler.postDelayed({ evaluate(pkg, className, eventTime, attempt + 1) }, ACTIVE_RETRY_MILLIS)
+            return
+        }
+        val now = SystemClock.uptimeMillis()
         val action = ForegroundRules.decide(
             foregroundPackage = pkg,
             ownPackage = packageName,
-            session = store.session(),
-            blockShowing = overlay != null || BlockActivity.isShowing(),
+            session = session,
+            blockShowing = showing,
             nowMillis = System.currentTimeMillis(),
             passThrough = passThroughPackages(),
             launcherPackages = launcherPackages(),
-            millisSinceShown = received - shownAtUptime,
-            millisSinceHome = received - homeSentAtUptime,
+            millisSinceShown = now - shownAtUptime,
+            millisSinceHome = now - homeSentAtUptime,
+            activeWindowPackage = active,
         )
         if (pkg != packageName || action != ForegroundAction.NONE) {
-            store.log("front: $pkg ${event.className} (event age ${received - event.eventTime} ms) -> $action")
+            store.log("front: $pkg $className, active window $active (event age ${now - eventTime} ms) -> $action")
         }
         when (action) {
-            ForegroundAction.SHOW_BLOCK -> show(received)
+            ForegroundAction.SHOW_BLOCK -> show(eventTime)
             ForegroundAction.HIDE_BLOCK -> hide()
             ForegroundAction.NONE -> Unit
         }
     }
 
-    /** Every installed launcher, so recents on a second launcher is handled like the stock one. */
+    @Suppress("DEPRECATION")
+    private fun activeWindowPackage(): String? {
+        val root = rootInActiveWindow ?: return null
+        return try {
+            root.packageName?.toString()
+        } finally {
+            root.recycle()
+        }
+    }
+
+    /** Every installed launcher, for the timing rules used when the active window cannot be read. */
     private fun launcherPackages(): Set<String> {
         val now = SystemClock.uptimeMillis()
         if (now - launchersReadAt > LAUNCHER_CACHE_MILLIS) {
@@ -81,6 +119,40 @@ class BlockerService : AccessibilityService() {
     private fun passThroughPackages(): Set<String> = buildSet {
         add("com.android.systemui")
         runCatching { getSystemService(InputMethodManager::class.java).enabledInputMethodList.forEach { add(it.packageName) } }
+    }
+
+    /** Runs as a foreground service so Android is less likely to stop it while the phone sits idle. */
+    fun applyKeepAlive() {
+        if (store.keepAlive) {
+            startKeepAlive()
+        } else {
+            runCatching { stopForeground(STOP_FOREGROUND_REMOVE) }
+            store.log("keep-alive notification removed")
+        }
+    }
+
+    private fun startKeepAlive() {
+        val open = PendingIntent.getActivity(
+            this,
+            0,
+            Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val notification = NotificationCompat.Builder(this, NotificationChannels.BLOCKER)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle(getString(R.string.blocker_notification_title))
+            .setContentText(getString(R.string.blocker_notification_text))
+            .setOngoing(true)
+            .setContentIntent(open)
+            .build()
+        val type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+        } else {
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_MANIFEST
+        }
+        runCatching { ServiceCompat.startForeground(this, FOREGROUND_ID, notification, type) }
+            .onSuccess { store.log("keep-alive notification started") }
+            .onFailure { store.log("keep-alive failed: ${it.javaClass.simpleName} ${it.message}") }
     }
 
     /**
@@ -105,13 +177,13 @@ class BlockerService : AccessibilityService() {
      * so the answer is logged to learn whether this request is allowed from the service.
      */
     private fun takeAudioFocus(audio: AudioManager) {
+        if (focusRequest != null || focusTried) return
+        focusTried = true
         val attributes = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build()
         val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
             .setAudioAttributes(attributes)
             .setOnAudioFocusChangeListener { }
             .build()
-        if (focusRequest != null || focusTried) return
-        focusTried = true
         val result = runCatching { audio.requestAudioFocus(request) }.getOrDefault(AudioManager.AUDIOFOCUS_REQUEST_FAILED)
         store.log(
             "audio focus request: " + when (result) {
@@ -142,26 +214,30 @@ class BlockerService : AccessibilityService() {
         }
     }
 
-    private fun show(received: Long) {
-        shownAtUptime = received
+    private fun show(eventTime: Long) {
+        shownAtUptime = SystemClock.uptimeMillis()
         if (store.pauseMedia) {
             pauseMedia()
             handler.removeCallbacks(mediaGuard)
             handler.postDelayed(mediaGuard, MEDIA_GUARD_MILLIS)
         }
         when (store.method) {
-            BlockMethod.ACTIVITY -> launchActivity(received, thenHome = false)
-            BlockMethod.OVERLAY -> showOverlay(received)
+            BlockMethod.ACTIVITY -> launchActivity(eventTime, thenHome = false)
+            BlockMethod.OVERLAY -> showOverlay(eventTime)
             BlockMethod.HOME -> goHome("method home")
             BlockMethod.OVERLAY_THEN_HOME -> {
-                showOverlay(received)
+                showOverlay(eventTime)
                 handler.postDelayed({ if (overlay != null) goHome("overlay then home") }, HOME_DELAY_MILLIS)
             }
-            BlockMethod.ACTIVITY_THEN_HOME -> launchActivity(received, thenHome = true)
+            BlockMethod.ACTIVITY_THEN_HOME -> launchActivity(eventTime, thenHome = true)
+            BlockMethod.HOME_THEN_ACTIVITY -> {
+                goHome("home first")
+                handler.postDelayed({ launchActivity(eventTime, thenHome = false) }, HOME_THEN_ACTIVITY_MILLIS)
+            }
         }
     }
 
-    private fun launchActivity(received: Long, thenHome: Boolean) {
+    private fun launchActivity(eventTime: Long, thenHome: Boolean) {
         val before = BlockActivity.lastCreatedUptime
         val intent = Intent(this, BlockActivity::class.java)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION or Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS or Intent.FLAG_ACTIVITY_CLEAR_TOP)
@@ -169,14 +245,14 @@ class BlockerService : AccessibilityService() {
         handler.postDelayed(
             {
                 val opened = BlockActivity.lastCreatedUptime > before
-                store.log(if (opened) "activity launch worked after ${BlockActivity.lastCreatedUptime - received} ms" else "activity launch did NOT open a screen")
+                store.log(if (opened) "activity launch worked after ${BlockActivity.lastCreatedUptime - eventTime} ms" else "activity launch did NOT open a screen")
                 if (!opened && thenHome) goHome("activity failed, sending home")
             },
             LAUNCH_CHECK_MILLIS,
         )
     }
 
-    private fun showOverlay(received: Long) {
+    private fun showOverlay(eventTime: Long) {
         if (overlay != null) return
         val view = buildBlockView(
             context = this,
@@ -185,10 +261,7 @@ class BlockerService : AccessibilityService() {
             goHomeLabel = getString(R.string.poc_block_go_home),
             stopLabel = getString(R.string.poc_block_stop),
             onGoHome = { goHome("go home button") },
-            onStop = {
-                store.stop()
-                hide()
-            },
+            onStop = ::stopTest,
         )
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT,
@@ -200,16 +273,28 @@ class BlockerService : AccessibilityService() {
         runCatching { getSystemService(WindowManager::class.java).addView(view, params) }
             .onSuccess {
                 overlay = view
-                store.log("overlay added ${SystemClock.uptimeMillis() - received} ms after the event")
+                store.log("overlay added ${SystemClock.uptimeMillis() - eventTime} ms after the event")
             }
             .onFailure { store.log("overlay failed: ${it.javaClass.simpleName} ${it.message}") }
     }
 
+    private fun stopTest() {
+        store.stop()
+        BlockerWatchdog.cancel(this)
+        hide()
+    }
+
+    /** One Home press at most every so often, so a loop of blocks can never stack up Home actions. */
     private fun goHome(reason: String) {
+        val now = SystemClock.uptimeMillis()
+        if (now - homeSentAtUptime < HOME_THROTTLE_MILLIS) {
+            store.log("home ignored ($reason): sent just now")
+            return
+        }
         val accepted = performGlobalAction(GLOBAL_ACTION_HOME)
         store.log("sending home ($reason): accepted=$accepted")
         if (accepted) {
-            homeSentAtUptime = SystemClock.uptimeMillis()
+            homeSentAtUptime = now
             handler.post { hide() }
         }
     }
@@ -239,11 +324,16 @@ class BlockerService : AccessibilityService() {
     }
 
     companion object {
+        private const val FOREGROUND_ID = 4201
         private const val HOME_DELAY_MILLIS = 2500L
+        private const val HOME_THEN_ACTIVITY_MILLIS = 150L
+        private const val HOME_THROTTLE_MILLIS = 700L
         private const val LAUNCH_CHECK_MILLIS = 700L
         private const val PAUSE_CHECK_MILLIS = 800L
         private const val MEDIA_GUARD_MILLIS = 700L
         private const val LAUNCHER_CACHE_MILLIS = 60_000L
+        private const val ACTIVE_RETRY_MILLIS = 120L
+        private const val MAX_ACTIVE_RETRIES = 3
 
         @Volatile
         var instance: BlockerService? = null
