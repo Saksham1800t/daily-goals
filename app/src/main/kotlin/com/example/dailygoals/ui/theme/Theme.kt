@@ -57,7 +57,7 @@ val accentBrush: Brush
     )
 
 @Composable
-fun DailyGoalsTheme(
+fun SkritiTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit,
 ) {

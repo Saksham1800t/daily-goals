@@ -6,7 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.example.dailygoals.ui.AppRoot
-import com.example.dailygoals.ui.theme.DailyGoalsTheme
+import com.example.dailygoals.ui.theme.SkritiTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -19,7 +19,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContent {
-            DailyGoalsTheme {
+            SkritiTheme {
                 AppRoot()
             }
         }

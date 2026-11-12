@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.AP
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import com.example.dailygoals.DailyGoalsApp
+import com.example.dailygoals.SkritiApp
 import com.example.dailygoals.data.GoalRepository
 import com.example.dailygoals.engine.Clock
 import com.example.dailygoals.engine.GoalError
@@ -114,7 +114,7 @@ class GoalFormViewModel(private val repository: GoalRepository, private val cloc
     companion object {
         val Factory = viewModelFactory {
             initializer {
-                val app = this[APPLICATION_KEY] as DailyGoalsApp
+                val app = this[APPLICATION_KEY] as SkritiApp
                 GoalFormViewModel(app.repository, app.clock)
             }
         }

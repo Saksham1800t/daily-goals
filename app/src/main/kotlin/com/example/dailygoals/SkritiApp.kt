@@ -6,7 +6,7 @@ import com.example.dailygoals.data.GoalRepository
 import com.example.dailygoals.engine.Clock
 import java.time.LocalDateTime
 
-class DailyGoalsApp : Application() {
+class SkritiApp : Application() {
     val clock: Clock = Clock { LocalDateTime.now() }
 
     val repository: GoalRepository by lazy {

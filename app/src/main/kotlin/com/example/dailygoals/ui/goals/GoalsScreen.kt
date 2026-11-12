@@ -29,7 +29,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import com.example.dailygoals.DailyGoalsApp
+import com.example.dailygoals.SkritiApp
 import com.example.dailygoals.R
 import com.example.dailygoals.data.GoalRepository
 import com.example.dailygoals.model.Goal
@@ -54,7 +54,7 @@ class GoalsViewModel(repository: GoalRepository) : ViewModel() {
         private const val STOP_TIMEOUT_MILLIS = 5000L
 
         val Factory = viewModelFactory {
-            initializer { GoalsViewModel((this[APPLICATION_KEY] as DailyGoalsApp).repository) }
+            initializer { GoalsViewModel((this[APPLICATION_KEY] as SkritiApp).repository) }
         }
     }
 }

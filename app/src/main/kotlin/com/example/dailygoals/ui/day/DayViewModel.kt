@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.AP
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import com.example.dailygoals.DailyGoalsApp
+import com.example.dailygoals.SkritiApp
 import com.example.dailygoals.data.GoalRepository
 import com.example.dailygoals.engine.CheckAction
 import com.example.dailygoals.engine.Clock
@@ -94,7 +94,7 @@ class DayViewModel(private val repository: GoalRepository, private val clock: Cl
 
         val Factory = viewModelFactory {
             initializer {
-                val app = this[APPLICATION_KEY] as DailyGoalsApp
+                val app = this[APPLICATION_KEY] as SkritiApp
                 DayViewModel(app.repository, app.clock)
             }
         }
