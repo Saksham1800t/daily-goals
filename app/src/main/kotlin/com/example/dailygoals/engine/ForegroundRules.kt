@@ -23,6 +23,9 @@ object ForegroundRules {
      */
     const val HOME_QUIET_MILLIS = 3000L
 
+    /** Right after Home, Android may still name the blocked app as the active window for a moment. */
+    const val HOME_STALE_MILLIS = 800L
+
     fun isActive(session: BlockSession?, nowMillis: Long): Boolean =
         session != null && (session.untilMillis == null || nowMillis < session.untilMillis)
 
@@ -51,7 +54,8 @@ object ForegroundRules {
         if (activeWindowPackage != null) {
             return when {
                 activeWindowPackage == ownPackage || activeWindowPackage in passThrough -> ForegroundAction.NONE
-                activeWindowPackage == session?.targetPackage -> if (blockShowing) ForegroundAction.NONE else ForegroundAction.SHOW_BLOCK
+                activeWindowPackage == session?.targetPackage ->
+                    if (blockShowing || millisSinceHome < HOME_STALE_MILLIS) ForegroundAction.NONE else ForegroundAction.SHOW_BLOCK
                 else -> if (blockShowing) ForegroundAction.HIDE_BLOCK else ForegroundAction.NONE
             }
         }

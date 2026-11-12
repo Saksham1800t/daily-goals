@@ -92,11 +92,23 @@ class ForegroundRulesTest {
         assertEquals(ForegroundAction.HIDE_BLOCK, hide)
     }
 
-    private fun verified(event: String, active: String?, showing: Boolean = false, active2: BlockSession? = session) =
-        ForegroundRules.decide(
-            event, own, active2, showing, 1_000, passThrough,
-            launcherPackages = setOf(launcher), millisSinceShown = 100, millisSinceHome = 100, activeWindowPackage = active,
-        )
+    private fun verified(
+        event: String,
+        active: String?,
+        showing: Boolean = false,
+        active2: BlockSession? = session,
+        sinceHome: Long = Long.MAX_VALUE,
+    ) = ForegroundRules.decide(
+        event, own, active2, showing, 1_000, passThrough,
+        launcherPackages = setOf(launcher), millisSinceShown = 100, millisSinceHome = sinceHome, activeWindowPackage = active,
+    )
+
+    @Test
+    fun aStaleActiveWindowRightAfterHomeDoesNotShowTheBlockAgain() {
+        assertEquals(ForegroundAction.NONE, verified(event = "com.google.android.googlequicksearchbox", active = target, sinceHome = 60))
+        assertEquals(ForegroundAction.NONE, verified(event = target, active = target, sinceHome = ForegroundRules.HOME_STALE_MILLIS - 1))
+        assertEquals(ForegroundAction.SHOW_BLOCK, verified(event = target, active = target, sinceHome = ForegroundRules.HOME_STALE_MILLIS))
+    }
 
     @Test
     fun theBlockIsShownOnlyWhenTheBlockedAppIsReallyTheActiveWindow() {
@@ -136,7 +148,8 @@ class ForegroundRulesTest {
 
     @Test
     fun withoutAnActiveWindowTheOlderTimingRulesStillApply() {
-        assertEquals(ForegroundAction.NONE, verified(event = target, active = null))
+        assertEquals(ForegroundAction.NONE, verified(event = target, active = null, sinceHome = 100))
+        assertEquals(ForegroundAction.SHOW_BLOCK, verified(event = target, active = null))
         assertEquals(ForegroundAction.NONE, verified(event = launcher, active = null, showing = true))
     }
 
