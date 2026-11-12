@@ -10,7 +10,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import java.io.File
 
 @Database(
-    entities = [GoalEntity::class, CheckInEntity::class, AmountLogEntity::class, PeriodResultEntity::class],
+    entities = [GoalEntity::class, CheckInEntity::class, AmountLogEntity::class, PeriodResultEntity::class, WarningMarkEntity::class],
     version = AppDatabase.VERSION,
     exportSchema = true,
 )
@@ -19,10 +19,17 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun checkInDao(): CheckInDao
     abstract fun amountLogDao(): AmountLogDao
     abstract fun periodResultDao(): PeriodResultDao
+    abstract fun warningMarkDao(): WarningMarkDao
 
     companion object {
-        const val VERSION = 2
+        const val VERSION = 3
         private const val FILE_NAME = "daily_goals.db"
+
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                MigrationSql.V2_TO_V3.forEach(db::execSQL)
+            }
+        }
 
         private val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
@@ -34,7 +41,7 @@ abstract class AppDatabase : RoomDatabase() {
         fun create(context: Context): AppDatabase {
             backUpBeforeMigration(context)
             return Room.databaseBuilder(context, AppDatabase::class.java, FILE_NAME)
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 .build()
         }
 

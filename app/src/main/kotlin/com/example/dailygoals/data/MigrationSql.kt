@@ -5,6 +5,18 @@ package com.example.dailygoals.data
  * Existing rows are kept; new columns get the defaults that match the Room entities.
  */
 object MigrationSql {
+    val V2_TO_V3: List<String> = listOf(
+        "ALTER TABLE `goals` ADD COLUMN `warningMode` TEXT NOT NULL DEFAULT 'NONE'",
+        "ALTER TABLE `goals` ADD COLUMN `warningIntervalMin` INTEGER NOT NULL DEFAULT 10",
+        "ALTER TABLE `goals` ADD COLUMN `warningMinute` INTEGER NOT NULL DEFAULT 1200",
+        "ALTER TABLE `goals` ADD COLUMN `strongAlert` INTEGER NOT NULL DEFAULT 0",
+        "CREATE TABLE IF NOT EXISTS `warning_marks` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+            "`goalId` INTEGER NOT NULL, `date` TEXT NOT NULL, `lastIndex` INTEGER NOT NULL, `level` TEXT NOT NULL, " +
+            "`firedAt` INTEGER NOT NULL, " +
+            "FOREIGN KEY(`goalId`) REFERENCES `goals`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "CREATE UNIQUE INDEX IF NOT EXISTS `index_warning_marks_goalId_date` ON `warning_marks` (`goalId`, `date`)",
+    )
+
     val V1_TO_V2: List<String> = listOf(
         "ALTER TABLE `goals` ADD COLUMN `freqCount` INTEGER NOT NULL DEFAULT 1",
         "ALTER TABLE `goals` ADD COLUMN `freqIntervalDays` INTEGER NOT NULL DEFAULT 2",

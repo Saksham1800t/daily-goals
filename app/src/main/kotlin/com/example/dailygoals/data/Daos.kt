@@ -87,6 +87,18 @@ interface AmountLogDao {
 }
 
 @Dao
+interface WarningMarkDao {
+    @Query("SELECT * FROM warning_marks WHERE date = :date")
+    suspend fun forDate(date: String): List<WarningMarkEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(mark: WarningMarkEntity)
+
+    @Query("DELETE FROM warning_marks WHERE date < :date")
+    suspend fun deleteBefore(date: String)
+}
+
+@Dao
 interface PeriodResultDao {
     @Query("SELECT * FROM period_results")
     suspend fun all(): List<PeriodResultEntity>

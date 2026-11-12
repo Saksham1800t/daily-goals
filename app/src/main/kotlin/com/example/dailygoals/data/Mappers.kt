@@ -4,6 +4,7 @@ import com.example.dailygoals.model.CheckIn
 import com.example.dailygoals.model.Goal
 import com.example.dailygoals.model.GoalDiscipline
 import com.example.dailygoals.model.GoalMeasurement
+import com.example.dailygoals.model.GoalReminder
 import com.example.dailygoals.model.GoalSchedule
 import com.example.dailygoals.model.TimeWindow
 import java.time.DayOfWeek
@@ -43,6 +44,12 @@ fun GoalEntity.toModel(): Goal = Goal(
         minimum = measurement.minimumAmount,
         minimumLabel = measurement.minimumLabel,
     ),
+    reminder = GoalReminder(
+        mode = reminder.warningMode,
+        intervalMinutes = reminder.warningIntervalMin,
+        allDayMinute = reminder.warningMinute,
+        strongAlert = reminder.strongAlert,
+    ),
 )
 
 fun Goal.toEntity(): GoalEntity = GoalEntity(
@@ -71,6 +78,12 @@ fun Goal.toEntity(): GoalEntity = GoalEntity(
         targetAmount = measurement.target,
         minimumAmount = measurement.minimum,
         minimumLabel = measurement.minimumLabel?.trim()?.ifEmpty { null },
+    ),
+    reminder = ReminderColumns(
+        warningMode = reminder.mode,
+        warningIntervalMin = reminder.intervalMinutes,
+        warningMinute = reminder.allDayMinute,
+        strongAlert = reminder.strongAlert,
     ),
 )
 

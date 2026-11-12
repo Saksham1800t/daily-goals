@@ -6,6 +6,7 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import com.example.dailygoals.engine.DeliveryLevel
 import com.example.dailygoals.engine.PeriodStatus
 import com.example.dailygoals.model.DayStatus
 import com.example.dailygoals.model.FailReason
@@ -15,6 +16,7 @@ import com.example.dailygoals.model.GoalType
 import com.example.dailygoals.model.MeasureType
 import com.example.dailygoals.model.MonthlyNth
 import com.example.dailygoals.model.QuotaFailureMode
+import com.example.dailygoals.model.WarningMode
 
 @Entity(tableName = "goals")
 data class GoalEntity(
@@ -26,6 +28,14 @@ data class GoalEntity(
     @Embedded val schedule: ScheduleColumns,
     @Embedded val discipline: DisciplineColumns,
     @Embedded val measurement: MeasurementColumns,
+    @Embedded val reminder: ReminderColumns,
+)
+
+data class ReminderColumns(
+    @ColumnInfo(defaultValue = "'NONE'") val warningMode: WarningMode,
+    @ColumnInfo(defaultValue = "10") val warningIntervalMin: Int,
+    @ColumnInfo(defaultValue = "1200") val warningMinute: Int,
+    @ColumnInfo(defaultValue = "0") val strongAlert: Boolean,
 )
 
 /** Dates are local yyyy-MM-dd text and times are minutes since midnight. */
@@ -89,6 +99,23 @@ data class AmountLogEntity(
     val date: String,
     val delta: Int,
     val loggedAt: Long,
+)
+
+/** The last warning shown for a goal on a date, so a warning fires once and the level used is recorded. */
+@Entity(
+    tableName = "warning_marks",
+    indices = [Index(value = ["goalId", "date"], unique = true)],
+    foreignKeys = [
+        ForeignKey(entity = GoalEntity::class, parentColumns = ["id"], childColumns = ["goalId"]),
+    ],
+)
+data class WarningMarkEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val goalId: Long,
+    val date: String,
+    val lastIndex: Int,
+    val level: DeliveryLevel,
+    val firedAt: Long,
 )
 
 @Entity(
