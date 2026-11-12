@@ -2,6 +2,8 @@ package com.example.dailygoals.data
 
 import com.example.dailygoals.model.CheckIn
 import com.example.dailygoals.model.Goal
+import com.example.dailygoals.model.GoalDiscipline
+import com.example.dailygoals.model.GoalMeasurement
 import com.example.dailygoals.model.GoalSchedule
 import com.example.dailygoals.model.TimeWindow
 import java.time.DayOfWeek
@@ -26,6 +28,20 @@ fun GoalEntity.toModel(): Goal = Goal(
             null
         },
         startDate = LocalDate.parse(schedule.startDate),
+        count = schedule.freqCount,
+        intervalDays = schedule.freqIntervalDays,
+        monthlyNth = schedule.monthlyNth,
+        monthlyWeekday = DayOfWeek.of(schedule.monthlyWeekday.coerceIn(1, DayOfWeek.entries.size)),
+        quotaFailureMode = schedule.quotaFailureMode,
+        graceMinutes = schedule.graceMinutes,
+    ),
+    discipline = GoalDiscipline(discipline.failOnWindowEnd, discipline.failOnDayEnd, discipline.failOnManual),
+    measurement = GoalMeasurement(
+        type = measurement.measureType,
+        unit = measurement.unit,
+        target = measurement.targetAmount,
+        minimum = measurement.minimumAmount,
+        minimumLabel = measurement.minimumLabel,
     ),
 )
 
@@ -41,6 +57,20 @@ fun Goal.toEntity(): GoalEntity = GoalEntity(
         windowStart = schedule.window?.startMinute,
         windowEnd = schedule.window?.endMinute,
         startDate = schedule.startDate.toString(),
+        freqCount = schedule.count,
+        freqIntervalDays = schedule.intervalDays,
+        monthlyNth = schedule.monthlyNth,
+        monthlyWeekday = schedule.monthlyWeekday.value,
+        quotaFailureMode = schedule.quotaFailureMode,
+        graceMinutes = schedule.graceMinutes,
+    ),
+    discipline = DisciplineColumns(discipline.failOnWindowEnd, discipline.failOnDayEnd, discipline.failOnManual),
+    measurement = MeasurementColumns(
+        measureType = measurement.type,
+        unit = measurement.unit,
+        targetAmount = measurement.target,
+        minimumAmount = measurement.minimum,
+        minimumLabel = measurement.minimumLabel?.trim()?.ifEmpty { null },
     ),
 )
 
@@ -49,4 +79,6 @@ fun CheckInEntity.toModel(): CheckIn = CheckIn(
     date = LocalDate.parse(date),
     status = status,
     failReason = failedReason,
+    amount = amount,
+    lateMinutes = lateMinutes,
 )

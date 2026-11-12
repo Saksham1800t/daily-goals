@@ -15,4 +15,11 @@ data class GoalMeasurement(
 ) {
     val isAmount: Boolean get() = type == MeasureType.AMOUNT
     val hasMinimumStep: Boolean get() = if (isAmount) minimum < target else !minimumLabel.isNullOrBlank()
+
+    /** Goals counted in minutes can be timed instead of typed in. */
+    val isTimeBased: Boolean get() = isAmount && unit.trim().lowercase() in TIME_UNITS
+
+    private companion object {
+        val TIME_UNITS = setOf("min", "mins", "minute", "minutes")
+    }
 }
