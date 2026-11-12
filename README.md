@@ -59,15 +59,61 @@ Every push also builds the APK with GitHub Actions; download it from the run's
 Copy the APK to the phone and open it, or run `adb install -r app-debug.apk` with
 USB debugging on. Android asks once to allow installs from that source.
 
+## Warnings
+
+Each goal can warn once or repeatedly (every 5, 10, 15 or 30 minutes). Warnings start
+when the goal's window opens, or at a chosen check time for a goal with no window. They
+stop when the goal is ticked or fails, or when the day ends. The wording gets firmer
+("Still unticked", then "Grace ends in 6 min" or "You are 30 minutes late"). A warning
+has a Done button, and an "I failed" button for goals that use that rule.
+
+Only the next event is scheduled, with one alarm, and every warning is shown once. The
+app wakes for each warning, for each failure deadline and at midnight, and it rebuilds
+its schedule from the database after a reboot, an app update, a clock change or a time
+zone change. Whatever the app missed is repaired the next time it runs.
+
+A warning uses the highest level Android currently allows: a strong alert over the lock
+screen (only for goals with that switch on), a pop-up with sound, a quiet notification,
+or, with notifications off, only the view inside the app. Settings, "Warnings and
+permissions", shows which level is available and links to the right settings pages. The
+app opens this screen once on first launch and works without any of the permissions.
+
+## Android 17 notes
+
+Google's Android 17 behaviour-change pages list no change to exact alarms, notification
+permission, notification actions, full-screen intents, boot receivers or time-change
+broadcasts. Two changes touch this kind of app, and the design avoids both: audio started
+from the background is restricted, so warnings use the system notification sound and the
+app plays no sound itself; and background activity launches are tightened, so the Done
+and I failed buttons are broadcasts rather than activity launches, and the app opens only
+when you tap a notification. The app uses no custom notification layouts, which is the
+other area Android 17 limits.
+
 ## Permissions
 
-None yet. The app has no internet permission and never will.
+| Permission | Used for |
+|---|---|
+| Notifications | Showing warnings (asked at runtime on Android 13 and newer) |
+| Exact alarms | Warnings at the exact minute; without it they can be a few minutes late |
+| Receive boot completed | Rebuilding the alarm after a reboot |
+| Full-screen intent | The strong alert over the lock screen; Android may keep it off |
+
+The app has no internet permission and never will.
 
 ## Known limits
 
 - Android 10 or newer is required.
 - The splash animation plays on Android 12 and newer; older versions show the
   still logo.
+- If you force-stop the app from Android settings, Android cancels its alarms and sends
+  it nothing until you open it again. Alarms survive normal process ends and reboots,
+  and everything is rebuilt when you reopen the app, but nothing can run while it is
+  stopped. This is an Android rule.
+- Some phone brands (Xiaomi, Oppo, Vivo, Samsung and others) stop background apps.
+  Exempt the app from battery optimisation and check any autostart list; the permissions
+  screen has a shortcut.
+- A strong alert over the lock screen needs Android to allow full-screen alerts for the
+  app, which it may not; the warning then arrives as a pop-up with sound.
 - A time window must start and end on the same day, so it cannot cross midnight.
 - Goals are listed in the order they were created; they cannot be reordered yet.
 - The goal form offers every day or chosen weekdays. Goals that are due a number of
