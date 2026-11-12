@@ -40,6 +40,7 @@ class BlockerService : AccessibilityService() {
     private var shownAtUptime = 0L
     private var focusRequest: AudioFocusRequest? = null
     private var focusTried = false
+    private var pauseStartedAt = 0L
     private var launchers: Set<String> = emptySet()
     private var launchersReadAt = Long.MIN_VALUE / 2
 
@@ -161,15 +162,23 @@ class BlockerService : AccessibilityService() {
      */
     private fun pauseMedia() {
         val audio = getSystemService(AudioManager::class.java)
-        if (!audio.isMusicActive) return
         val now = SystemClock.uptimeMillis()
+        if (!audio.isMusicActive) {
+            if (pauseStartedAt != 0L) {
+                store.log("sound stopped ${now - pauseStartedAt} ms after the first pause key")
+                pauseStartedAt = 0L
+            }
+            return
+        }
         runCatching {
             audio.dispatchMediaKeyEvent(KeyEvent(now, now, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PAUSE, 0))
             audio.dispatchMediaKeyEvent(KeyEvent(now, now, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PAUSE, 0))
         }.onFailure { store.log("pause key failed: ${it.javaClass.simpleName}") }
-        store.log("pause key sent while sound was playing")
+        if (pauseStartedAt == 0L) {
+            pauseStartedAt = now
+            store.log("sound is playing behind the block: pause key sent")
+        }
         takeAudioFocus(audio)
-        handler.postDelayed({ store.log("sound still playing after the pause key and focus request: ${audio.isMusicActive}") }, PAUSE_CHECK_MILLIS)
     }
 
     /**
@@ -210,16 +219,18 @@ class BlockerService : AccessibilityService() {
         override fun run() {
             if (overlay == null && !BlockActivity.isShowing()) return
             if (store.pauseMedia) pauseMedia()
-            handler.postDelayed(this, MEDIA_GUARD_MILLIS)
+            val early = SystemClock.uptimeMillis() - shownAtUptime < MEDIA_FAST_PERIOD_MILLIS
+            handler.postDelayed(this, if (early) MEDIA_GUARD_FAST_MILLIS else MEDIA_GUARD_MILLIS)
         }
     }
 
     private fun show(eventTime: Long) {
         shownAtUptime = SystemClock.uptimeMillis()
         if (store.pauseMedia) {
+            pauseStartedAt = 0L
             pauseMedia()
             handler.removeCallbacks(mediaGuard)
-            handler.postDelayed(mediaGuard, MEDIA_GUARD_MILLIS)
+            handler.postDelayed(mediaGuard, MEDIA_GUARD_FAST_MILLIS)
         }
         when (store.method) {
             BlockMethod.ACTIVITY -> launchActivity(eventTime, thenHome = false)
@@ -301,6 +312,7 @@ class BlockerService : AccessibilityService() {
 
     private fun hide() {
         handler.removeCallbacks(mediaGuard)
+        pauseStartedAt = 0L
         focusTried = false
         releaseAudioFocus()
         overlay?.let { view ->
@@ -329,8 +341,9 @@ class BlockerService : AccessibilityService() {
         private const val HOME_THEN_ACTIVITY_MILLIS = 150L
         private const val HOME_THROTTLE_MILLIS = 700L
         private const val LAUNCH_CHECK_MILLIS = 700L
-        private const val PAUSE_CHECK_MILLIS = 800L
         private const val MEDIA_GUARD_MILLIS = 700L
+        private const val MEDIA_GUARD_FAST_MILLIS = 250L
+        private const val MEDIA_FAST_PERIOD_MILLIS = 5000L
         private const val LAUNCHER_CACHE_MILLIS = 60_000L
         private const val ACTIVE_RETRY_MILLIS = 120L
         private const val MAX_ACTIVE_RETRIES = 3
