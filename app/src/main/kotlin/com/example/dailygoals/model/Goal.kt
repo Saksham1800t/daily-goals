@@ -13,4 +13,5 @@ data class Goal(
     val schedule: GoalSchedule,
     val discipline: GoalDiscipline = GoalDiscipline(),
     val measurement: GoalMeasurement = GoalMeasurement(),
+    val reminder: GoalReminder = GoalReminder(),
 )
