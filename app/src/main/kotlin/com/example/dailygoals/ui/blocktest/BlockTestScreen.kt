@@ -15,9 +15,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
@@ -77,6 +79,7 @@ fun BlockTestScreen(onClose: () -> Unit, modifier: Modifier = Modifier) {
     var target by remember { mutableStateOf(store.target) }
     var method by remember { mutableStateOf(store.method) }
     var minutes by remember { mutableStateOf<Int?>(15) }
+    var pauseMedia by remember { mutableStateOf(store.pauseMedia) }
     LaunchedEffect(Unit) {
         while (true) {
             tick++
@@ -156,6 +159,19 @@ fun BlockTestScreen(onClose: () -> Unit, modifier: Modifier = Modifier) {
                     store.method = option
                 }
             }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 14.dp)
+                    .toggleable(value = pauseMedia, role = Role.Checkbox, onValueChange = { pauseMedia = it; store.pauseMedia = it }),
+            ) {
+                Checkbox(checked = pauseMedia, onCheckedChange = null, modifier = Modifier.padding(end = 12.dp))
+                Column {
+                    Text(stringResource(R.string.poc_pause_media), fontSize = 14.5.sp, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.poc_pause_media_help), fontSize = 12.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
             Text(stringResource(R.string.poc_duration), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 14.dp, bottom = 6.dp))
             SegmentedChoice(
                 options = DURATIONS.map { it to durationLabel(it) },
@@ -176,6 +192,15 @@ fun BlockTestScreen(onClose: () -> Unit, modifier: Modifier = Modifier) {
                 color = if (session != null) colors.pending else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 10.dp),
             )
+            if (session != null && !enabledInSettings) {
+                Text(
+                    text = stringResource(R.string.poc_service_off_warning),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = colors.failed,
+                    modifier = Modifier.padding(top = 10.dp),
+                )
+            }
         }
 
         Section(R.string.poc_step_log) {

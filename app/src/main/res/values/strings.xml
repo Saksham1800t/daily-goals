@@ -61,6 +61,9 @@
     <string name="poc_method_overlay_home_help">The overlay shows, and after 2.5 seconds Home is pressed.</string>
     <string name="poc_method_activity_home">Block screen, home if it fails</string>
     <string name="poc_method_activity_home_help">Tries the block screen and presses Home when it did not open.</string>
+    <string name="poc_pause_media">Pause the app\'s sound</string>
+    <string name="poc_pause_media_help">A block does not stop a video or music playing behind it. This presses pause on whatever is playing when the block appears.</string>
+    <string name="poc_service_off_warning">The test is on, but the blocker is switched off in Accessibility settings, so nothing is blocked. Android switches it off when the app is force-stopped. Switch it on again.</string>
     <string name="poc_duration">How long</string>
     <string name="poc_duration_minutes">%1$d min</string>
     <string name="poc_duration_hour">1 hour</string>
