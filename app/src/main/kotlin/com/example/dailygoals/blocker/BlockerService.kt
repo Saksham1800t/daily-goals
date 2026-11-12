@@ -41,6 +41,7 @@ class BlockerService : AccessibilityService() {
     private var focusRequest: AudioFocusRequest? = null
     private var focusTried = false
     private var pauseStartedAt = 0L
+    private var launchPendingUntil = 0L
     private var launchers: Set<String> = emptySet()
     private var launchersReadAt = Long.MIN_VALUE / 2
 
@@ -64,7 +65,7 @@ class BlockerService : AccessibilityService() {
      */
     private fun evaluate(pkg: String, className: CharSequence?, eventTime: Long, attempt: Int) {
         val session = store.session()
-        val showing = overlay != null || BlockActivity.isShowing()
+        val showing = overlay != null || BlockActivity.isShowing() || SystemClock.uptimeMillis() < launchPendingUntil
         if (session == null && !showing) return
         val active = activeWindowPackage()
         if (active == null && attempt < MAX_ACTIVE_RETRIES && (pkg == session?.targetPackage || showing)) {
@@ -249,6 +250,7 @@ class BlockerService : AccessibilityService() {
     }
 
     private fun launchActivity(eventTime: Long, thenHome: Boolean) {
+        launchPendingUntil = SystemClock.uptimeMillis() + LAUNCH_PENDING_MILLIS
         val before = BlockActivity.lastCreatedUptime
         val intent = Intent(this, BlockActivity::class.java)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION or Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS or Intent.FLAG_ACTIVITY_CLEAR_TOP)
@@ -341,6 +343,7 @@ class BlockerService : AccessibilityService() {
         private const val HOME_THEN_ACTIVITY_MILLIS = 150L
         private const val HOME_THROTTLE_MILLIS = 700L
         private const val LAUNCH_CHECK_MILLIS = 700L
+        private const val LAUNCH_PENDING_MILLIS = 600L
         private const val MEDIA_GUARD_MILLIS = 700L
         private const val MEDIA_GUARD_FAST_MILLIS = 250L
         private const val MEDIA_FAST_PERIOD_MILLIS = 5000L
