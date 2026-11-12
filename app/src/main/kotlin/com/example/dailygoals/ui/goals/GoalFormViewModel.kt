@@ -84,18 +84,23 @@ class GoalFormViewModel(private val repository: GoalRepository, private val cloc
         }
     }
 
+    private var saving = false
+
     fun save(onSaved: () -> Unit) {
+        if (saving) return
         val form = mutableState.value
         val errors = validate(form)
         if (errors.isNotEmpty()) {
             mutableState.update { it.copy(errors = errors) }
             return
         }
+        saving = true
         val schedule = form.schedule(clock.now().toLocalDate())
         val goal = form.original?.copy(name = form.name.trim(), type = form.type, schedule = schedule)
             ?: Goal(name = form.name.trim(), type = form.type, schedule = schedule)
         viewModelScope.launch {
             repository.save(goal)
+            saving = false
             onSaved()
         }
     }
