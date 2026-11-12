@@ -132,7 +132,7 @@ internal fun AmountSection(item: DayItem, editable: Boolean, timerStart: Long?, 
             val running = timerStart != null
             ActionChip(
                 text = if (running) {
-                    stringResource(R.string.goal_timer_stop, TimerRules.elapsedMinutes(timerStart ?: nowMillis, nowMillis))
+                    stringResource(R.string.goal_timer_stop, TimerRules.elapsedMinutes(timerStart, nowMillis))
                 } else {
                     stringResource(R.string.goal_timer_start)
                 },
