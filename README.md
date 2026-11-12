@@ -132,3 +132,22 @@ The app has no internet permission and never will.
   were already closed are not judged again.
 - Debug builds have a "Time shift" control in Settings that moves the app's clock for
   testing; it does nothing in a release build.
+
+## Blocking: proof of concept result
+
+Tested on a Moto G57 Power running Android 17 with one test app and no goal logic.
+
+- Chosen method: draw a full-screen block view in an accessibility overlay. It needs only
+  the accessibility service, appears 30 to 250 ms after the app opens, and is checked
+  against the window that is really in front, so a floating window or a late launcher
+  report never covers the home screen. "Home, then block screen" also works but needs
+  Display over other apps.
+- Works: opening from the launcher and recents, restart without opening Skriti, lock and
+  unlock, a second launcher, split-screen (the other pane counts as in front), and the
+  service coming back by itself after a process restart.
+- Does not work: Android switches the service off when the app is force-stopped, so it
+  must be switched on again; a watchdog notice tells the user. Apps installed from a
+  file are refused by Play Protect, so blocking builds are installed over a cable.
+- A block does not stop sound by itself; the test presses pause, which takes about 2.5 s
+  on YouTube.
+- Not yet run: leaving the phone idle for hours with battery optimisation on.
