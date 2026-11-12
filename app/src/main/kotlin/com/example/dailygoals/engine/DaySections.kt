@@ -2,6 +2,7 @@ package com.example.dailygoals.engine
 
 import com.example.dailygoals.model.DayStatus
 import com.example.dailygoals.model.TimeWindow
+import com.example.dailygoals.model.isMet
 import java.time.LocalDate
 import java.time.LocalDateTime
 
@@ -11,7 +12,7 @@ enum class DaySection { MISSED, NOW, OVERDUE, ANY_TIME, LATER, KEPT }
 object DaySections {
     fun sectionOf(window: TimeWindow?, status: DayStatus, date: LocalDate, now: LocalDateTime): DaySection {
         if (status == DayStatus.FAILED) return DaySection.MISSED
-        if (status == DayStatus.DONE) return DaySection.KEPT
+        if (status.isMet) return DaySection.KEPT
         val today = now.toLocalDate()
         if (date < today) return DaySection.OVERDUE
         if (date > today) return DaySection.LATER

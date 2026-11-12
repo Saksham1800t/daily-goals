@@ -27,6 +27,21 @@ class DaySummaryTest {
     }
 
     @Test
+    fun minimumCountsAsKeptButIsWeightedInThePercentage() {
+        val summary = DaySummary.of(listOf(DayStatus.DONE, DayStatus.MINIMUM, DayStatus.PENDING, DayStatus.FAILED))
+        assertEquals(DaySummary(total = 4, kept = 2, failed = 1, minimum = 1), summary)
+        assertEquals(40, summary.percent(60))
+        assertEquals(50, summary.percent(100))
+        assertEquals(25, summary.percent(0))
+    }
+
+    @Test
+    fun percentIsZeroWithoutGoalsAndOneHundredWhenAllAreDone() {
+        assertEquals(0, DaySummary.EMPTY.percent(60))
+        assertEquals(100, DaySummary.of(listOf(DayStatus.DONE, DayStatus.DONE)).percent(60))
+    }
+
+    @Test
     fun allKeptWhenEveryGoalIsDone() {
         assertTrue(DaySummary.of(listOf(DayStatus.DONE, DayStatus.DONE)).allKept)
     }

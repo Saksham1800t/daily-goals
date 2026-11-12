@@ -87,6 +87,31 @@ class DayPlannerTest {
     }
 
     @Test
+    fun aMetQuotaShowsAsKeptWithProgressAndAnUnmetOneStaysPending() {
+        val weekly = Goal(id = 7, name = "Gym", schedule = GoalSchedule(frequency = Frequency.PER_WEEK, count = 2, startDate = start))
+        val one = listOf(CheckIn(7, LocalDate.of(2026, 11, 9), DayStatus.DONE))
+        val pending = DayPlanner.plan(listOf(weekly), one, today, now).items.single()
+        assertEquals(DayStatus.PENDING, pending.status)
+        assertEquals(QuotaProgress(done = 1, required = 2, perWeek = true), pending.quota)
+        val two = one + CheckIn(7, LocalDate.of(2026, 11, 10), DayStatus.MINIMUM)
+        val met = DayPlanner.plan(listOf(weekly), two, today, now)
+        assertEquals(DayStatus.DONE, met.items.single().status)
+        assertEquals(DaySection.KEPT, met.items.single().section)
+        assertEquals(1, met.summary.kept)
+    }
+
+    @Test
+    fun minimumResultsCountAsKeptAndCarryTheirAmount() {
+        val checkIns = listOf(CheckIn(3, today, DayStatus.MINIMUM, amount = 25, lateMinutes = null))
+        val plan = DayPlanner.plan(goals, checkIns, today, now)
+        val study = plan.items.first { it.goal.id == 3L }
+        assertEquals(DaySection.KEPT, study.section)
+        assertEquals(25, study.amount)
+        assertEquals(1, plan.summary.minimum)
+        assertEquals(1, plan.summary.kept)
+    }
+
+    @Test
     fun summariesCoverEachRequestedDate() {
         val yesterday = today.minusDays(1)
         val checkIns = listOf(
