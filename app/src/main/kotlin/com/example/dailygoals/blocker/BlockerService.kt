@@ -2,6 +2,7 @@ package com.example.dailygoals.blocker
 
 import android.accessibilityservice.AccessibilityService
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.PixelFormat
 import android.media.AudioManager
 import android.os.Handler
@@ -25,7 +26,9 @@ class BlockerService : AccessibilityService() {
     private val handler = Handler(Looper.getMainLooper())
     private val store get() = (application as SkritiApp).pocStore
     private var overlay: View? = null
-    private var lastPackage: String? = null
+    private var shownAtUptime = 0L
+    private var launchers: Set<String> = emptySet()
+    private var launchersReadAt = Long.MIN_VALUE / 2
 
     override fun onServiceConnected() {
         instance = this
@@ -43,16 +46,30 @@ class BlockerService : AccessibilityService() {
             blockShowing = overlay != null || BlockActivity.isShowing(),
             nowMillis = System.currentTimeMillis(),
             passThrough = passThroughPackages(),
+            launcherPackages = launcherPackages(),
+            millisSinceShown = received - shownAtUptime,
         )
-        if (pkg != lastPackage || action != ForegroundAction.NONE) {
+        if (pkg != packageName || action != ForegroundAction.NONE) {
             store.log("front: $pkg ${event.className} (event age ${received - event.eventTime} ms) -> $action")
         }
-        lastPackage = pkg
         when (action) {
             ForegroundAction.SHOW_BLOCK -> show(received)
             ForegroundAction.HIDE_BLOCK -> hide()
             ForegroundAction.NONE -> Unit
         }
+    }
+
+    /** Every installed launcher, so recents on a second launcher is handled like the stock one. */
+    private fun launcherPackages(): Set<String> {
+        val now = SystemClock.uptimeMillis()
+        if (now - launchersReadAt > LAUNCHER_CACHE_MILLIS) {
+            val home = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+            launchers = runCatching {
+                packageManager.queryIntentActivities(home, PackageManager.MATCH_ALL).map { it.activityInfo.packageName }.toSet()
+            }.getOrDefault(launchers)
+            launchersReadAt = now
+        }
+        return launchers
     }
 
     private fun passThroughPackages(): Set<String> = buildSet {
@@ -77,6 +94,7 @@ class BlockerService : AccessibilityService() {
     }
 
     private fun show(received: Long) {
+        shownAtUptime = received
         if (store.pauseMedia) pauseMedia()
         when (store.method) {
             BlockMethod.ACTIVITY -> launchActivity(received, thenHome = false)
@@ -135,8 +153,8 @@ class BlockerService : AccessibilityService() {
     }
 
     private fun goHome(reason: String) {
-        store.log("sending home ($reason)")
-        performGlobalAction(GLOBAL_ACTION_HOME)
+        val accepted = performGlobalAction(GLOBAL_ACTION_HOME)
+        store.log("sending home ($reason): accepted=$accepted")
     }
 
     private fun hide() {
@@ -164,6 +182,7 @@ class BlockerService : AccessibilityService() {
         private const val HOME_DELAY_MILLIS = 2500L
         private const val LAUNCH_CHECK_MILLIS = 700L
         private const val PAUSE_CHECK_MILLIS = 800L
+        private const val LAUNCHER_CACHE_MILLIS = 60_000L
 
         @Volatile
         var instance: BlockerService? = null
