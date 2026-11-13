@@ -73,6 +73,14 @@ class BlockSetTest {
     }
 
     @Test
+    fun correctingOneDaysFailureEndsOnlyTheBlockItCaused() {
+        val monday = wake.copy(sourceDate = "2026-11-09")
+        val tuesday = wake.copy(sourceDate = "2026-11-10", endsAtMillis = 12_000)
+        val left = BlockSet.withoutFailure(listOf(monday, tuesday, study), goalId = 1, date = "2026-11-10")
+        assertEquals(listOf(monday, study), left)
+    }
+
+    @Test
     fun expiredBlocksAreDropped() {
         assertEquals(listOf(study), BlockSet.withoutExpired(listOf(wake, study), nowMillis = 8_000))
         assertTrue(BlockSet.withoutExpired(listOf(wake), nowMillis = 8_000).isEmpty())

@@ -10,6 +10,8 @@ data class ActiveBlock(
     val kind: BlockKind,
     val endsAtMillis: Long,
     val message: String? = null,
+    /** The date of the failure that caused a punishment block, so correcting that day ends exactly that block. */
+    val sourceDate: String? = null,
 )
 
 /** Everything that blocks one app right now, ordered by when each block ends; [longest] ends last. */
@@ -48,6 +50,9 @@ object BlockSet {
 
     /** Correcting a failure removes only that goal's blocks; the app stays blocked while any other lists it. */
     fun withoutGoal(blocks: List<ActiveBlock>, goalId: Long): List<ActiveBlock> = blocks.filterNot { it.goalId == goalId }
+
+    fun withoutFailure(blocks: List<ActiveBlock>, goalId: Long, date: String): List<ActiveBlock> =
+        blocks.filterNot { it.goalId == goalId && it.sourceDate == date }
 
     fun withoutExpired(blocks: List<ActiveBlock>, nowMillis: Long): List<ActiveBlock> = blocks.filter { nowMillis < it.endsAtMillis }
 }

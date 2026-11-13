@@ -49,6 +49,10 @@ class BlockRegistry(private val context: Context) {
         blocks = blocks.filterNot { it.goalId == block.goalId && it.packageName == block.packageName } + block
     }
 
+    fun removeFailure(goalId: Long, date: String) {
+        blocks = BlockSet.withoutFailure(blocks, goalId, date)
+    }
+
     fun removeGoal(goalId: Long) {
         blocks = BlockSet.withoutGoal(blocks, goalId)
     }

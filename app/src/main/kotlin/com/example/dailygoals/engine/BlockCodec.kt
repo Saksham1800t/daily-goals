@@ -13,14 +13,14 @@ object BlockCodec {
     private fun dec(value: String) = URLDecoder.decode(value, "UTF-8")
 
     fun encodeBlocks(blocks: List<ActiveBlock>): String = blocks.joinToString("\n") {
-        listOf(it.goalId.toString(), enc(it.goalName), enc(it.packageName), it.kind.name, it.endsAtMillis.toString(), enc(it.message.orEmpty()))
+        listOf(it.goalId.toString(), enc(it.goalName), enc(it.packageName), it.kind.name, it.endsAtMillis.toString(), enc(it.message.orEmpty()), enc(it.sourceDate.orEmpty()))
             .joinToString("\t")
     }
 
     fun decodeBlocks(text: String): List<ActiveBlock> = text.lines().mapNotNull { line ->
         runCatching {
             val f = line.split('\t')
-            ActiveBlock(f[0].toLong(), dec(f[1]), dec(f[2]), BlockKind.valueOf(f[3]), f[4].toLong(), dec(f[5]).ifEmpty { null })
+            ActiveBlock(f[0].toLong(), dec(f[1]), dec(f[2]), BlockKind.valueOf(f[3]), f[4].toLong(), dec(f[5]).ifEmpty { null }, f.getOrNull(6)?.let(::dec)?.ifEmpty { null })
         }.getOrNull()
     }
 
