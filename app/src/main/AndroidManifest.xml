@@ -16,6 +16,31 @@
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.HOME" />
         </intent>
+        <intent>
+            <action android:name="android.intent.action.DIAL" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.SENDTO" />
+            <data android:scheme="smsto" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="geo" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="content" android:host="contacts" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.SHOW_ALARMS" />
+        </intent>
+        <package android:name="com.google.android.apps.authenticator2" />
+        <package android:name="com.azure.authenticator" />
+        <package android:name="com.authy.authy" />
+        <package android:name="org.fedorahosted.freeotp" />
+        <package android:name="com.beemdevelopment.aegis" />
+        <package android:name="com.twofasapp" />
+        <package android:name="org.shadowice.flocke.andotp" />
     </queries>
 
     <application

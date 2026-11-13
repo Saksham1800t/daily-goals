@@ -5,6 +5,7 @@ import android.content.pm.ApplicationInfo
 import com.example.dailygoals.data.AppDatabase
 import com.example.dailygoals.data.GoalRepository
 import com.example.dailygoals.data.SettingsStore
+import com.example.dailygoals.blocker.BlockRegistry
 import com.example.dailygoals.blocker.PocStore
 import com.example.dailygoals.data.backup.BackupService
 import com.example.dailygoals.engine.Clock
@@ -46,7 +47,9 @@ class SkritiApp : Application() {
 
     val permissions: PermissionChecker by lazy { PermissionChecker(this) }
 
-    val pocStore: PocStore by lazy { PocStore(this) }
+    val pocStore: PocStore by lazy { PocStore(this, blocks) }
+
+    val blocks: BlockRegistry by lazy { BlockRegistry(this) }
 
     val warnings: WarningRunner by lazy {
         WarningRunner(repository, AlarmScheduler(this, permissions), permissions, WarningNotifier(this))
