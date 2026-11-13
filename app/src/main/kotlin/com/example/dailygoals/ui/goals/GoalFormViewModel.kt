@@ -10,8 +10,11 @@ import com.example.dailygoals.data.GoalRepository
 import com.example.dailygoals.engine.Clock
 import com.example.dailygoals.engine.GoalError
 import com.example.dailygoals.engine.GoalValidator
+import com.example.dailygoals.engine.Intensity
+import com.example.dailygoals.engine.PunishmentRules
 import com.example.dailygoals.model.Frequency
 import com.example.dailygoals.model.Goal
+import com.example.dailygoals.model.GoalAvoidance
 import com.example.dailygoals.model.GoalDiscipline
 import com.example.dailygoals.model.GoalMeasurement
 import com.example.dailygoals.model.GoalReminder
@@ -50,6 +53,10 @@ data class GoalFormState(
     val intervalMinutes: Int = GoalReminder.DEFAULT_INTERVAL_MINUTES,
     val allDayMinute: Int = GoalReminder.DEFAULT_ALL_DAY_MINUTE,
     val strongAlert: Boolean = false,
+    val intensity: Intensity = Intensity.NONE,
+    val blockMinutes: Int = PunishmentRules.DEFAULT_BLOCK_MINUTES,
+    val blockMessage: String = "",
+    val blockPackages: Set<String> = emptySet(),
     val errors: Set<GoalError> = emptySet(),
     val original: Goal? = null,
 ) {
@@ -58,7 +65,16 @@ data class GoalFormState(
 
     /** A rule that needs a window is switched off while the goal has none. */
     val discipline: GoalDiscipline
-        get() = GoalDiscipline(failOnWindowEnd && hasWindow, failOnDayEnd, failOnManual)
+        get() = GoalDiscipline(
+            failOnWindowEnd = failOnWindowEnd && hasWindow,
+            failOnDayEnd = failOnDayEnd,
+            failOnManual = failOnManual,
+            intensity = intensity,
+            blockMinutes = blockMinutes,
+            blockMessage = blockMessage.trim().ifEmpty { null },
+        )
+
+    val avoidance: GoalAvoidance get() = GoalAvoidance(blockPackages)
 
     val reminder: GoalReminder
         get() = GoalReminder(warningMode, intervalMinutes, allDayMinute, strongAlert && warningMode != WarningMode.NONE)
@@ -120,6 +136,10 @@ class GoalFormViewModel(private val repository: GoalRepository, private val cloc
                     intervalMinutes = goal.reminder.intervalMinutes,
                     allDayMinute = goal.reminder.allDayMinute,
                     strongAlert = goal.reminder.strongAlert,
+                    intensity = goal.discipline.intensity,
+                    blockMinutes = goal.discipline.blockMinutes,
+                    blockMessage = goal.discipline.blockMessage.orEmpty(),
+                    blockPackages = goal.avoidance.temptingPackages,
                     original = goal,
                 )
             }
@@ -165,6 +185,7 @@ class GoalFormViewModel(private val repository: GoalRepository, private val cloc
             discipline = form.discipline,
             measurement = form.measurement,
             reminder = form.reminder,
+            avoidance = form.avoidance,
         )
         viewModelScope.launch {
             repository.save(goal)

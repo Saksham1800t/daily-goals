@@ -350,4 +350,21 @@
     <string name="failure_title">You missed %1$s</string>
     <string name="failure_text">It is recorded as failed.</string>
     <string name="failure_text_blocked">%1$s is blocked until %2$s.</string>
+
+    <string name="form_punishment">Punishment</string>
+    <string name="intensity_none">None</string>
+    <string name="intensity_gentle">Gentle</string>
+    <string name="intensity_moderate">Moderate</string>
+    <string name="intensity_strong">Strong</string>
+    <string name="intensity_none_help">A failure is only recorded.</string>
+    <string name="intensity_gentle_help">A failure sends a notification. Nothing is blocked.</string>
+    <string name="intensity_moderate_help">A failure sends a notification and blocks the apps you choose.</string>
+    <string name="intensity_strong_help">As moderate, plus a full-screen alert. The animated wallpaper comes later.</string>
+    <string name="punish_duration">Block the apps for</string>
+    <string name="punish_hours">%1$d h</string>
+    <string name="punish_choose_apps">Choose apps to block</string>
+    <string name="punish_apps_chosen">%1$d apps chosen, tap to change</string>
+    <string name="punish_app_safe">Always allowed, never blocked</string>
+    <string name="punish_message">Block message for this goal (optional)</string>
+    <string name="error_block_message_long">The message can be at most 160 characters.</string>
 </resources>

@@ -149,6 +149,7 @@ fun GoalFormScreen(viewModel: GoalFormViewModel, onClose: () -> Unit, modifier: 
         FailureRulesField(form, viewModel)
         MeasurementField(form, viewModel)
         WarningsField(form, viewModel)
+        PunishmentField(form, viewModel)
 
         if (form.isEdit) {
             TextButton(onClick = { confirmDelete = true }, modifier = Modifier.padding(top = 8.dp)) {
