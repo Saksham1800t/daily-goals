@@ -36,6 +36,7 @@ class GoalRepository(
     private val database: AppDatabase,
     private val settings: SettingsStore,
     private val clock: Clock,
+    private val punishments: PunishmentSink? = null,
 ) {
     private val goalDao = database.goalDao()
     private val checkInDao = database.checkInDao()
@@ -146,6 +147,7 @@ class GoalRepository(
         existing: CheckInEntity?,
     ) {
         val millis = epochMillis()
+        val punishmentSkipped = applyPunishment(goalId, date, status, existing, millis)
         checkInDao.save(
             CheckInEntity(
                 id = existing?.id ?: 0,
@@ -157,8 +159,24 @@ class GoalRepository(
                 updatedAt = millis,
                 amount = amount,
                 lateMinutes = lateMinutes,
+                punishmentSkipped = punishmentSkipped,
             ),
         )
+    }
+
+    /** A new failure today starts its punishment once; correcting a failed day ends what that failure caused. */
+    private suspend fun applyPunishment(goalId: Long, date: LocalDate, status: DayStatus, existing: CheckInEntity?, millis: Long): Boolean {
+        val sink = punishments ?: return existing?.punishmentSkipped ?: false
+        val before = existing?.status
+        if (status == DayStatus.FAILED && before != DayStatus.FAILED && date == clock.now().toLocalDate()) {
+            val goal = goalDao.find(goalId)?.toModel() ?: return false
+            return sink.onFailed(goal, date, millis)
+        }
+        if (status != DayStatus.FAILED && before == DayStatus.FAILED) {
+            sink.onCorrected(goalId, date)
+            return false
+        }
+        return existing?.punishmentSkipped ?: false
     }
 
     fun startTimer(goalId: Long) = settings.startTimer(goalId, epochMillis())
