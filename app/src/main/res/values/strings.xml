@@ -320,4 +320,30 @@
     <string name="block_pause_holding">Keep holding… %1$d</string>
     <string name="block_pause_used_up">No emergency pause left today</string>
     <string name="block_pause_started">Blocks are paused</string>
+
+    <string name="settings_blocking">Blocking</string>
+    <string name="pause_help">The emergency pause lifts every block for a while. Block end times keep running. Two uses per day.</string>
+    <string name="pause_running">Paused, %1$s left</string>
+    <string name="pause_uses_left">Uses left today: %1$d</string>
+    <string name="pause_hold">Hold for 5 seconds to pause</string>
+    <string name="pause_type_label">Or type %1$s</string>
+    <string name="pause_start">Start the pause</string>
+    <string name="pause_banner">Blocks are paused, %1$s left</string>
+    <string name="safe_apps_title">Always allowed</string>
+    <string name="safe_apps_help">These apps can never be blocked, even if a goal lists them. Your phone, messages, contacts, clock, maps and authenticator apps are added for you.</string>
+    <string name="blocked_apps_title">Blocked apps</string>
+    <string name="blocked_apps_help">Every goal that blocks an app, and when each block ends. The app stays blocked until the last one ends.</string>
+    <string name="blocked_apps_none">Nothing is blocked right now.</string>
+    <string name="blocked_apps_paused">Emergency pause: blocks are lifted for %1$s</string>
+    <string name="blocked_apps_line">%1$s, until %2$s (%3$s)</string>
+    <string name="blocked_apps_scheduled">scheduled</string>
+    <string name="blocked_apps_punishment">punishment</string>
+    <string name="blocked_apps_longest">longest</string>
+    <string name="messages_title">Block messages</string>
+    <string name="messages_help">What the block screen says. Up to 160 characters. Empty brings back the default. Tap a chip to insert a value.</string>
+    <string name="messages_scheduled">Scheduled blocks</string>
+    <string name="messages_punishment">Punishment blocks</string>
+    <string name="messages_preview">Preview: %1$s</string>
+    <string name="messages_reset">Reset to default</string>
+    <string name="messages_attempts">Show today\'s attempts on the block screen</string>
 </resources>
