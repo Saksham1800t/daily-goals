@@ -75,6 +75,8 @@ class MigrationTest {
 
     private fun migrateToThree() = MigrationSql.V2_TO_V3.forEach(::execute)
 
+    private fun migrateToFour() = MigrationSql.V3_TO_V4.forEach(::execute)
+
     /** Builds a fresh database of [version] beside the migrated one and compares structure table by table. */
     private fun assertStructureEqualsFresh(version: Int) {
         val migrated = tableNames(version).associateWith(::structureOf)
@@ -122,6 +124,38 @@ class MigrationTest {
         assertEquals(listOf(2), query("SELECT COUNT(*) FROM goals") { it.getInt(1) })
         assertEquals(listOf(listOf(1, 1)), query("SELECT SUM(failOnManual = 0), SUM(failOnManual = 1) FROM goals") { listOf(it.getInt(1), it.getInt(2)) })
         assertStructureEqualsFresh(3)
+    }
+
+    @Test
+    fun versionFourKeepsRowsAndStartsEveryExistingGoalWithNoPunishment() {
+        createVersion(3)
+        insertVersionOneData()
+        migrateToFour()
+        val goals = query("SELECT id, punishmentIntensity, blockMinutes, blockMessage, temptingPackages FROM goals ORDER BY id") {
+            listOf(it.getLong(1), it.getString(2), it.getInt(3), it.getString(4), it.getString(5))
+        }
+        assertEquals(listOf(listOf(1L, "NONE", 60, null, ""), listOf(2L, "NONE", 60, null, "")), goals)
+        assertEquals(listOf(listOf(0, 0)), query("SELECT SUM(punishmentSkipped), COUNT(*) - 2 FROM check_ins") { listOf(it.getInt(1), it.getInt(2)) })
+        assertEquals(listOf("No smoking"), query("SELECT name FROM goals WHERE id = 2") { it.getString(1) })
+    }
+
+    @Test
+    fun versionFourStructureEqualsAFreshVersionFourDatabase() {
+        createVersion(3)
+        migrateToFour()
+        assertStructureEqualsFresh(4)
+    }
+
+    @Test
+    fun migratingStraightFromVersionOneToFourKeepsEverything() {
+        createVersion(1)
+        insertVersionOneData()
+        migrate()
+        migrateToThree()
+        migrateToFour()
+        assertEquals(listOf(2), query("SELECT COUNT(*) FROM goals") { it.getInt(1) })
+        assertEquals(listOf(2), query("SELECT COUNT(*) FROM check_ins") { it.getInt(1) })
+        assertStructureEqualsFresh(4)
     }
 
     @Test
