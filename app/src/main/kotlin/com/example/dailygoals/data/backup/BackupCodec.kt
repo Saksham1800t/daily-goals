@@ -2,6 +2,7 @@ package com.example.dailygoals.data.backup
 
 import com.example.dailygoals.data.AmountLogEntity
 import com.example.dailygoals.data.AppDatabase
+import com.example.dailygoals.data.AvoidanceColumns
 import com.example.dailygoals.data.CheckInEntity
 import com.example.dailygoals.data.DisciplineColumns
 import com.example.dailygoals.data.GoalEntity
@@ -9,6 +10,7 @@ import com.example.dailygoals.data.MeasurementColumns
 import com.example.dailygoals.data.PeriodResultEntity
 import com.example.dailygoals.data.ReminderColumns
 import com.example.dailygoals.data.ScheduleColumns
+import com.example.dailygoals.engine.Intensity
 import com.example.dailygoals.engine.PeriodStatus
 import com.example.dailygoals.model.DayStatus
 import com.example.dailygoals.model.FailReason
@@ -121,6 +123,10 @@ object BackupCodec {
         put("failOnWindowEnd", goal.discipline.failOnWindowEnd)
         put("failOnDayEnd", goal.discipline.failOnDayEnd)
         put("failOnManual", goal.discipline.failOnManual)
+        put("punishmentIntensity", goal.discipline.punishmentIntensity.name)
+        put("blockMinutes", goal.discipline.blockMinutes)
+        put("blockMessage", goal.discipline.blockMessage ?: JSONObject.NULL)
+        put("temptingPackages", goal.avoidance.temptingPackages)
         put("measureType", goal.measurement.measureType.name)
         put("unit", goal.measurement.unit)
         put("targetAmount", goal.measurement.targetAmount)
@@ -155,6 +161,9 @@ object BackupCodec {
             failOnWindowEnd = json.optBoolean("failOnWindowEnd", false),
             failOnDayEnd = json.optBoolean("failOnDayEnd", false),
             failOnManual = json.optBoolean("failOnManual", false),
+            punishmentIntensity = Intensity.valueOf(json.optString("punishmentIntensity", "NONE")),
+            blockMinutes = json.optInt("blockMinutes", 60),
+            blockMessage = json.stringOrNull("blockMessage"),
         ),
         measurement = MeasurementColumns(
             measureType = MeasureType.valueOf(json.optString("measureType", "CHECK")),
@@ -169,6 +178,7 @@ object BackupCodec {
             warningMinute = json.optInt("warningMinute", 1200),
             strongAlert = json.optBoolean("strongAlert", false),
         ),
+        avoidance = AvoidanceColumns(json.optString("temptingPackages", "")),
     )
 
     private fun checkInJson(row: CheckInEntity) = JSONObject().apply {
@@ -181,6 +191,7 @@ object BackupCodec {
         put("updatedAt", row.updatedAt)
         put("amount", row.amount)
         put("lateMinutes", row.lateMinutes ?: JSONObject.NULL)
+        put("punishmentSkipped", row.punishmentSkipped)
     }
 
     private fun checkInFrom(json: JSONObject) = CheckInEntity(
@@ -193,6 +204,7 @@ object BackupCodec {
         updatedAt = json.getLong("updatedAt"),
         amount = json.optInt("amount", 0),
         lateMinutes = json.intOrNull("lateMinutes"),
+        punishmentSkipped = json.optBoolean("punishmentSkipped", false),
     )
 
     private fun logJson(log: AmountLogEntity) = JSONObject().apply {

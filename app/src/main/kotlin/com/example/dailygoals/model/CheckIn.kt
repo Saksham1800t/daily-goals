@@ -15,4 +15,5 @@ data class CheckIn(
     val failReason: FailReason? = null,
     val amount: Int = 0,
     val lateMinutes: Int? = null,
+    val punishmentSkipped: Boolean = false,
 )

@@ -7,6 +7,7 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.example.dailygoals.engine.DeliveryLevel
+import com.example.dailygoals.engine.Intensity
 import com.example.dailygoals.engine.PeriodStatus
 import com.example.dailygoals.model.DayStatus
 import com.example.dailygoals.model.FailReason
@@ -29,6 +30,7 @@ data class GoalEntity(
     @Embedded val discipline: DisciplineColumns,
     @Embedded val measurement: MeasurementColumns,
     @Embedded val reminder: ReminderColumns,
+    @Embedded val avoidance: AvoidanceColumns,
 )
 
 data class ReminderColumns(
@@ -57,6 +59,14 @@ data class DisciplineColumns(
     @ColumnInfo(defaultValue = "0") val failOnWindowEnd: Boolean,
     @ColumnInfo(defaultValue = "0") val failOnDayEnd: Boolean,
     @ColumnInfo(defaultValue = "0") val failOnManual: Boolean,
+    @ColumnInfo(defaultValue = "'NONE'") val punishmentIntensity: Intensity,
+    @ColumnInfo(defaultValue = "60") val blockMinutes: Int,
+    val blockMessage: String?,
+)
+
+/** Package names, one per line. */
+data class AvoidanceColumns(
+    @ColumnInfo(defaultValue = "''") val temptingPackages: String,
 )
 
 data class MeasurementColumns(
@@ -84,6 +94,7 @@ data class CheckInEntity(
     val updatedAt: Long,
     @ColumnInfo(defaultValue = "0") val amount: Int = 0,
     val lateMinutes: Int? = null,
+    @ColumnInfo(defaultValue = "0") val punishmentSkipped: Boolean = false,
 )
 
 @Entity(

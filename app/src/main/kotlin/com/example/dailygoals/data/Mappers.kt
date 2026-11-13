@@ -2,6 +2,7 @@ package com.example.dailygoals.data
 
 import com.example.dailygoals.model.CheckIn
 import com.example.dailygoals.model.Goal
+import com.example.dailygoals.model.GoalAvoidance
 import com.example.dailygoals.model.GoalDiscipline
 import com.example.dailygoals.model.GoalMeasurement
 import com.example.dailygoals.model.GoalReminder
@@ -36,7 +37,14 @@ fun GoalEntity.toModel(): Goal = Goal(
         quotaFailureMode = schedule.quotaFailureMode,
         graceMinutes = schedule.graceMinutes,
     ),
-    discipline = GoalDiscipline(discipline.failOnWindowEnd, discipline.failOnDayEnd, discipline.failOnManual),
+    discipline = GoalDiscipline(
+        failOnWindowEnd = discipline.failOnWindowEnd,
+        failOnDayEnd = discipline.failOnDayEnd,
+        failOnManual = discipline.failOnManual,
+        intensity = discipline.punishmentIntensity,
+        blockMinutes = discipline.blockMinutes,
+        blockMessage = discipline.blockMessage,
+    ),
     measurement = GoalMeasurement(
         type = measurement.measureType,
         unit = measurement.unit,
@@ -50,6 +58,7 @@ fun GoalEntity.toModel(): Goal = Goal(
         allDayMinute = reminder.warningMinute,
         strongAlert = reminder.strongAlert,
     ),
+    avoidance = GoalAvoidance(avoidance.temptingPackages.lines().filter { it.isNotBlank() }.toSet()),
 )
 
 fun Goal.toEntity(): GoalEntity = GoalEntity(
@@ -71,7 +80,14 @@ fun Goal.toEntity(): GoalEntity = GoalEntity(
         quotaFailureMode = schedule.quotaFailureMode,
         graceMinutes = schedule.graceMinutes,
     ),
-    discipline = DisciplineColumns(discipline.failOnWindowEnd, discipline.failOnDayEnd, discipline.failOnManual),
+    discipline = DisciplineColumns(
+        failOnWindowEnd = discipline.failOnWindowEnd,
+        failOnDayEnd = discipline.failOnDayEnd,
+        failOnManual = discipline.failOnManual,
+        punishmentIntensity = discipline.intensity,
+        blockMinutes = discipline.blockMinutes,
+        blockMessage = discipline.blockMessage?.trim()?.ifEmpty { null },
+    ),
     measurement = MeasurementColumns(
         measureType = measurement.type,
         unit = measurement.unit,
@@ -85,6 +101,7 @@ fun Goal.toEntity(): GoalEntity = GoalEntity(
         warningMinute = reminder.allDayMinute,
         strongAlert = reminder.strongAlert,
     ),
+    avoidance = AvoidanceColumns(avoidance.temptingPackages.sorted().joinToString("\n")),
 )
 
 fun CheckInEntity.toModel(): CheckIn = CheckIn(
@@ -94,4 +111,5 @@ fun CheckInEntity.toModel(): CheckIn = CheckIn(
     failReason = failedReason,
     amount = amount,
     lateMinutes = lateMinutes,
+    punishmentSkipped = punishmentSkipped,
 )

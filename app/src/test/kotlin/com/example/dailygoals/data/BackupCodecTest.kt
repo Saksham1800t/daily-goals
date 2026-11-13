@@ -3,6 +3,7 @@ package com.example.dailygoals.data
 import com.example.dailygoals.data.backup.Backup
 import com.example.dailygoals.data.backup.BackupCodec
 import com.example.dailygoals.data.backup.BackupException
+import com.example.dailygoals.engine.Intensity
 import com.example.dailygoals.engine.PeriodStatus
 import com.example.dailygoals.model.DayStatus
 import com.example.dailygoals.model.FailReason
@@ -38,11 +39,19 @@ class BackupCodecTest {
             quotaFailureMode = QuotaFailureMode.END_OF_PERIOD,
             graceMinutes = 10,
         ),
-        discipline = DisciplineColumns(failOnWindowEnd = true, failOnDayEnd = false, failOnManual = true),
+        discipline = DisciplineColumns(
+            failOnWindowEnd = true,
+            failOnDayEnd = false,
+            failOnManual = true,
+            punishmentIntensity = Intensity.MODERATE,
+            blockMinutes = 120,
+            blockMessage = "No {app} until {until}",
+        ),
         measurement = MeasurementColumns(MeasureType.AMOUNT, "min", 120, 20, "Put on shoes"),
         reminder = ReminderColumns(WarningMode.REPEATING, warningIntervalMin = 15, warningMinute = 1260, strongAlert = true),
+        avoidance = AvoidanceColumns("com.instagram.android\ncom.youtube"),
     )
-    private val checkIn = CheckInEntity(3, 7, "2026-11-10", DayStatus.FAILED, FailReason.WINDOW_END, null, 555, amount = 15, lateMinutes = null)
+    private val checkIn = CheckInEntity(3, 7, "2026-11-10", DayStatus.FAILED, FailReason.WINDOW_END, null, 555, amount = 15, lateMinutes = null, punishmentSkipped = true)
     private val log = AmountLogEntity(9, 7, "2026-11-10", 15, 444)
     private val period = PeriodResultEntity(1, 7, "2026-11-09", "2026-11-15", 4, 4, 7, 0, 0, 2, PeriodStatus.FAILED, "2026-11-13", 777)
     private val backup = Backup(AppDatabase.VERSION,listOf(goal), listOf(checkIn), listOf(log), listOf(period), dayEndMinute = 1380, minimumWeightPercent = 70)

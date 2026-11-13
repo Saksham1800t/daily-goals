@@ -22,8 +22,14 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun warningMarkDao(): WarningMarkDao
 
     companion object {
-        const val VERSION = 3
+        const val VERSION = 4
         private const val FILE_NAME = "daily_goals.db"
+
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                MigrationSql.V3_TO_V4.forEach(db::execSQL)
+            }
+        }
 
         private val MIGRATION_2_3 = object : Migration(2, 3) {
             override fun migrate(db: SupportSQLiteDatabase) {
@@ -41,7 +47,7 @@ abstract class AppDatabase : RoomDatabase() {
         fun create(context: Context): AppDatabase {
             backUpBeforeMigration(context)
             return Room.databaseBuilder(context, AppDatabase::class.java, FILE_NAME)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                 .build()
         }
 
