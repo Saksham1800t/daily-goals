@@ -36,6 +36,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.dailygoals.R
 import com.example.dailygoals.SkritiApp
 import com.example.dailygoals.ui.blocktest.BlockTestScreen
+import com.example.dailygoals.ui.settings.BlockedAppsScreen
+import com.example.dailygoals.ui.settings.BlockMessagesScreen
+import com.example.dailygoals.ui.settings.BlockingPage
+import com.example.dailygoals.ui.settings.PauseBanner
+import com.example.dailygoals.ui.settings.SafeAppsScreen
 import com.example.dailygoals.ui.components.AppIcon
 import com.example.dailygoals.ui.components.AppIconKind
 import com.example.dailygoals.ui.day.DayScreen
@@ -71,15 +76,24 @@ fun AppRoot() {
     val app = LocalContext.current.applicationContext as SkritiApp
     var showPermissions by rememberSaveable { mutableStateOf(!app.settings.setupSeen()) }
     var showBlockTest by rememberSaveable { mutableStateOf(false) }
+    var blockingPage by rememberSaveable { mutableStateOf<BlockingPage?>(null) }
     val closePermissions = {
         app.settings.markSetupSeen()
         showPermissions = false
     }
 
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).safeDrawingPadding()) {
+        PauseBanner(app.blocks)
         if (showPermissions) {
             BackHandler(onBack = closePermissions)
             PermissionsScreen(onClose = closePermissions, modifier = Modifier.weight(1f))
+        } else if (blockingPage != null) {
+            BackHandler { blockingPage = null }
+            when (blockingPage) {
+                BlockingPage.BLOCKED_APPS -> BlockedAppsScreen(onClose = { blockingPage = null }, modifier = Modifier.weight(1f))
+                BlockingPage.SAFE_APPS -> SafeAppsScreen(onClose = { blockingPage = null }, modifier = Modifier.weight(1f))
+                else -> BlockMessagesScreen(onClose = { blockingPage = null }, modifier = Modifier.weight(1f))
+            }
         } else if (showBlockTest) {
             BackHandler { showBlockTest = false }
             BlockTestScreen(onClose = { showBlockTest = false }, modifier = Modifier.weight(1f))
@@ -104,6 +118,7 @@ fun AppRoot() {
                         viewModel = viewModel(factory = SettingsViewModel.Factory),
                         onOpenPermissions = { showPermissions = true },
                         onOpenBlockTest = { showBlockTest = true },
+                        onOpenBlockingPage = { blockingPage = it },
                     )
                 }
             }

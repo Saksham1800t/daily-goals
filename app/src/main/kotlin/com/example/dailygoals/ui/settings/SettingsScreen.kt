@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.dailygoals.R
+import com.example.dailygoals.SkritiApp
 import com.example.dailygoals.data.backup.Backup
 import com.example.dailygoals.data.backup.RestoreMode
 import com.example.dailygoals.ui.components.SectionLabel
@@ -50,7 +51,13 @@ private const val MINUTES_PER_HOUR = 60L
 private const val MINUTES_PER_DAY = 24 * MINUTES_PER_HOUR
 
 @Composable
-fun SettingsScreen(viewModel: SettingsViewModel, onOpenPermissions: () -> Unit, onOpenBlockTest: () -> Unit, modifier: Modifier = Modifier) {
+fun SettingsScreen(
+    viewModel: SettingsViewModel,
+    onOpenPermissions: () -> Unit,
+    onOpenBlockTest: () -> Unit,
+    onOpenBlockingPage: (BlockingPage) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -90,6 +97,15 @@ fun SettingsScreen(viewModel: SettingsViewModel, onOpenPermissions: () -> Unit, 
         Group(R.string.settings_warnings) {
             Text(stringResource(R.string.settings_warnings_help), fontSize = 12.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             SettingsButton(stringResource(R.string.settings_warnings_open), Modifier.padding(top = 10.dp), onOpenPermissions)
+        }
+
+        Group(R.string.settings_blocking) {
+            EmergencyPauseCard((context.applicationContext as SkritiApp).blocks)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 14.dp)) {
+                SettingsButton(stringResource(R.string.blocked_apps_title)) { onOpenBlockingPage(BlockingPage.BLOCKED_APPS) }
+                SettingsButton(stringResource(R.string.safe_apps_title)) { onOpenBlockingPage(BlockingPage.SAFE_APPS) }
+            }
+            SettingsButton(stringResource(R.string.messages_title), Modifier.padding(top = 8.dp)) { onOpenBlockingPage(BlockingPage.MESSAGES) }
         }
 
         Group(R.string.settings_day) {
@@ -176,7 +192,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onOpenPermissions: () -> Unit, 
 }
 
 @Composable
-private fun Group(title: Int, content: @Composable () -> Unit) {
+internal fun Group(title: Int, content: @Composable () -> Unit) {
     val scheme = MaterialTheme.colorScheme
     val shape = RoundedCornerShape(22.dp)
     Column(Modifier.padding(top = 18.dp)) {
@@ -193,7 +209,7 @@ private fun Group(title: Int, content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun SettingsButton(text: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+internal fun SettingsButton(text: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val scheme = MaterialTheme.colorScheme
     Text(
         text = text,
