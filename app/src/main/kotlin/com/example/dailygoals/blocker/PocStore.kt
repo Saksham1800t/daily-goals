@@ -1,6 +1,8 @@
 package com.example.dailygoals.blocker
 
 import android.content.Context
+import com.example.dailygoals.engine.ActiveBlock
+import com.example.dailygoals.engine.BlockKind
 import com.example.dailygoals.engine.BlockSession
 import java.io.File
 import java.time.LocalTime
@@ -13,7 +15,7 @@ enum class BlockMethod { ACTIVITY, OVERLAY, HOME, OVERLAY_THEN_HOME, ACTIVITY_TH
  * State and log for the blocking test. It lives in plain preferences and a text file so the service can
  * read it after a reboot without any screen of the app having been opened.
  */
-class PocStore(context: Context) {
+class PocStore(context: Context, private val registry: BlockRegistry) {
     private val prefs = context.getSharedPreferences("block_test", Context.MODE_PRIVATE)
     private val logFile = File(context.filesDir, "block-test.log")
     private val stamp = DateTimeFormatter.ofPattern("HH:mm:ss.SSS")
@@ -51,11 +53,14 @@ class PocStore(context: Context) {
     fun start(minutes: Int?) {
         val until = minutes?.let { System.currentTimeMillis() + it * MILLIS_PER_MINUTE } ?: NO_END
         prefs.edit().putBoolean(KEY_ACTIVE, true).putLong(KEY_UNTIL, until).apply()
+        val end = if (until == NO_END) System.currentTimeMillis() + OPEN_ENDED_MILLIS else until
+        registry.addBlock(ActiveBlock(BlockScreens.TEST_GOAL_ID, "Blocking test", target, BlockKind.PUNISHMENT, end))
         log("test started: $target, method $method, ${minutes?.let { "$it min" } ?: "until switched off"}")
     }
 
     fun stop() {
         prefs.edit().putBoolean(KEY_ACTIVE, false).apply()
+        registry.removeGoal(BlockScreens.TEST_GOAL_ID)
         log("test stopped")
     }
 
@@ -88,6 +93,7 @@ class PocStore(context: Context) {
         private const val KEY_WATCHDOG_NOTICE = "watchdog_notice"
         private const val KEY_UNTIL = "until"
         private const val NO_END = -1L
+        private const val OPEN_ENDED_MILLIS = 30L * 24 * 60 * 60 * 1000
         private const val MILLIS_PER_MINUTE = 60_000L
         private const val MAX_LOG_BYTES = 60_000L
         private const val KEEP_LINES = 200

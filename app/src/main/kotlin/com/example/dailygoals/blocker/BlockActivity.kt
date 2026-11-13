@@ -5,33 +5,35 @@ import android.os.Bundle
 import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
-import com.example.dailygoals.R
 import com.example.dailygoals.SkritiApp
 import java.lang.ref.WeakReference
 
-/** Method 1 of the proof of concept: a block screen started as an activity from the accessibility service. */
+/** A block screen started as an activity from the accessibility service; the same content as the overlay. */
 class BlockActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val store = (application as SkritiApp).pocStore
+        val app = application as SkritiApp
         lastCreatedUptime = SystemClock.uptimeMillis()
         current = WeakReference(this)
-        store.log("block activity opened")
-        setContentView(
-            buildBlockView(
-                context = this,
-                title = getString(R.string.poc_block_title),
-                message = getString(R.string.poc_block_message, store.target),
-                goHomeLabel = getString(R.string.poc_block_go_home),
-                stopLabel = getString(R.string.poc_block_stop),
-                onGoHome = ::goHome,
-                onStop = {
-                    store.stop()
-                    BlockerWatchdog.cancel(applicationContext)
-                    finish()
-                },
-            ),
+        app.pocStore.log("block activity opened")
+        val actions = BlockViewActions(
+            onGoHome = ::goHome,
+            onStopTest = {
+                app.pocStore.stop()
+                BlockerWatchdog.cancel(applicationContext)
+                finish()
+            },
+            onPause = { length ->
+                BlockerService.startPause(app.blocks, length)
+                finish()
+            },
         )
+        val view = BlockScreens.view(this, app.blocks, BlockerService.screenPackage, actions)
+        if (view == null) {
+            finish()
+            return
+        }
+        setContentView(view)
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() = goHome()
         })

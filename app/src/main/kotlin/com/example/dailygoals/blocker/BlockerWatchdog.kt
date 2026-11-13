@@ -17,7 +17,6 @@ import androidx.core.app.NotificationManagerCompat
 import com.example.dailygoals.MainActivity
 import com.example.dailygoals.R
 import com.example.dailygoals.SkritiApp
-import com.example.dailygoals.engine.ForegroundRules
 import com.example.dailygoals.engine.WatchdogAction
 import com.example.dailygoals.engine.WatchdogRules
 import com.example.dailygoals.notify.NotificationChannels
@@ -53,9 +52,9 @@ class BlockerWatchdogJob : JobService() {
     override fun onStartJob(params: JobParameters?): Boolean {
         val app = application as SkritiApp
         val store = app.pocStore
-        val session = store.session()?.takeIf { ForegroundRules.isActive(it, System.currentTimeMillis()) }
+        val sessionActive = app.blocks.hasActiveBlocks()
         val enabled = BlockerStatus.isServiceEnabled(this)
-        when (WatchdogRules.decide(session != null, enabled, store.lastWatchdogNotice, System.currentTimeMillis())) {
+        when (WatchdogRules.decide(sessionActive, enabled, store.lastWatchdogNotice, System.currentTimeMillis())) {
             WatchdogAction.NOTIFY -> {
                 notifyServiceOff()
                 store.lastWatchdogNotice = System.currentTimeMillis()

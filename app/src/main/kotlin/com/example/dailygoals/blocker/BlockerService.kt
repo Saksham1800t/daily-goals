@@ -24,8 +24,10 @@ import androidx.core.app.ServiceCompat
 import com.example.dailygoals.MainActivity
 import com.example.dailygoals.R
 import com.example.dailygoals.SkritiApp
+import com.example.dailygoals.engine.BlockSession
 import com.example.dailygoals.engine.ForegroundAction
 import com.example.dailygoals.engine.ForegroundRules
+import com.example.dailygoals.engine.PauseLength
 import com.example.dailygoals.notify.NotificationChannels
 
 /**
@@ -36,6 +38,9 @@ import com.example.dailygoals.notify.NotificationChannels
 class BlockerService : AccessibilityService() {
     private val handler = Handler(Looper.getMainLooper())
     private val store get() = (application as SkritiApp).pocStore
+    private val registry get() = (application as SkritiApp).blocks
+    private var shownPackage: String? = null
+    private var pauseEndRecheck: Runnable? = null
     private var overlay: View? = null
     private var homeSentAtUptime = Long.MIN_VALUE / 2
     private var shownAtUptime = 0L
@@ -50,7 +55,7 @@ class BlockerService : AccessibilityService() {
         instance = this
         store.log("service connected")
         if (store.keepAlive) startKeepAlive()
-        if (store.session() != null) BlockerWatchdog.schedule(this)
+        if (registry.hasActiveBlocks()) BlockerWatchdog.schedule(this)
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
@@ -65,21 +70,24 @@ class BlockerService : AccessibilityService() {
      * decides. Android sometimes has not updated it yet, so an empty answer is retried a few times.
      */
     private fun evaluate(pkg: String, className: CharSequence?, eventTime: Long, attempt: Int) {
-        val session = store.session()
+        val nowWall = System.currentTimeMillis()
+        val blocked = registry.blockedPackages(nowWall)
         val showing = overlay != null || BlockActivity.isShowing() || SystemClock.uptimeMillis() < launchPendingUntil
-        if (session == null && !showing) return
-        val active = activeWindowPackage(session?.targetPackage)
-        if (active == null && attempt < MAX_ACTIVE_RETRIES && (pkg == session?.targetPackage || showing)) {
+        if (blocked.isEmpty() && !showing) return
+        val active = activeWindowPackage(blocked)
+        if (active == null && attempt < MAX_ACTIVE_RETRIES && (pkg in blocked || showing)) {
             handler.postDelayed({ evaluate(pkg, className, eventTime, attempt + 1) }, ACTIVE_RETRY_MILLIS)
             return
         }
+        val target = listOfNotNull(active, pkg).firstOrNull { it in blocked } ?: shownPackage ?: blocked.firstOrNull()
+        val session = target?.takeIf { it in blocked }?.let { BlockSession(it, registry.blockFor(it, nowWall)?.longest?.endsAtMillis) }
         val now = SystemClock.uptimeMillis()
         val action = ForegroundRules.decide(
             foregroundPackage = pkg,
             ownPackage = packageName,
             session = session,
             blockShowing = showing,
-            nowMillis = System.currentTimeMillis(),
+            nowMillis = nowWall,
             passThrough = passThroughPackages(),
             launcherPackages = launcherPackages(),
             millisSinceShown = now - shownAtUptime,
@@ -90,31 +98,36 @@ class BlockerService : AccessibilityService() {
             store.log("front: $pkg $className, active window $active (event age ${now - eventTime} ms) -> $action")
         }
         when (action) {
-            ForegroundAction.SHOW_BLOCK -> show(eventTime)
+            ForegroundAction.SHOW_BLOCK -> session?.let { show(eventTime, it.targetPackage) }
             ForegroundAction.HIDE_BLOCK -> hide()
             ForegroundAction.NONE -> Unit
         }
     }
 
     /**
-     * In split-screen only one pane is the active window, so the blocked app in the other pane would
-     * stay usable. When it has a visible window of its own (not a picture-in-picture one) it counts as
-     * the active window.
+     * In split-screen only one pane is the active window, so a blocked app in the other pane would stay
+     * usable. When a blocked app has a visible window of its own (not a picture-in-picture one) it counts
+     * as the active window.
      */
     @Suppress("DEPRECATION")
-    private fun activeWindowPackage(target: String?): String? {
+    private fun activeWindowPackage(blocked: Set<String>): String? {
         val root = rootInActiveWindow ?: return null
         val active = try {
             root.packageName?.toString()
         } finally {
             root.recycle()
         }
-        if (target == null || active == target) return active
-        val shownInAnotherPane = windows.any { window ->
-            window.type == AccessibilityWindowInfo.TYPE_APPLICATION && !window.isInPictureInPictureMode &&
-                window.root?.let { r -> (r.packageName?.toString() == target).also { r.recycle() } } == true
+        if (blocked.isEmpty() || active in blocked) return active
+        val inAnotherPane = windows.firstNotNullOfOrNull { window ->
+            if (window.type != AccessibilityWindowInfo.TYPE_APPLICATION || window.isInPictureInPictureMode) return@firstNotNullOfOrNull null
+            val windowRoot = window.root ?: return@firstNotNullOfOrNull null
+            try {
+                windowRoot.packageName?.toString()?.takeIf { it in blocked }
+            } finally {
+                windowRoot.recycle()
+            }
         }
-        return if (shownInAnotherPane) target else active
+        return inAnotherPane ?: active
     }
 
     /** Every installed launcher, for the timing rules used when the active window cannot be read. */
@@ -237,7 +250,10 @@ class BlockerService : AccessibilityService() {
         }
     }
 
-    private fun show(eventTime: Long) {
+    private fun show(eventTime: Long, blockedPackage: String) {
+        shownPackage = blockedPackage
+        screenPackage = blockedPackage
+        registry.recordAttempt(blockedPackage)
         shownAtUptime = SystemClock.uptimeMillis()
         if (store.pauseMedia) {
             pauseStartedAt = 0L
@@ -279,15 +295,7 @@ class BlockerService : AccessibilityService() {
 
     private fun showOverlay(eventTime: Long) {
         if (overlay != null) return
-        val view = buildBlockView(
-            context = this,
-            title = getString(R.string.poc_block_title),
-            message = getString(R.string.poc_block_message, store.target),
-            goHomeLabel = getString(R.string.poc_block_go_home),
-            stopLabel = getString(R.string.poc_block_stop),
-            onGoHome = { goHome("go home button") },
-            onStop = ::stopTest,
-        )
+        val view = BlockScreens.view(this, registry, screenPackage, blockActions()) ?: return
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.MATCH_PARENT,
@@ -301,6 +309,30 @@ class BlockerService : AccessibilityService() {
                 store.log("overlay added ${SystemClock.uptimeMillis() - eventTime} ms after the event")
             }
             .onFailure { store.log("overlay failed: ${it.javaClass.simpleName} ${it.message}") }
+    }
+
+    private fun blockActions() = BlockViewActions(
+        onGoHome = { goHome("go home button") },
+        onStopTest = ::stopTest,
+        onPause = { length -> startPause(registry, length) },
+    )
+
+    /** Lifts every block for a while; at the end the block comes back if a blocked app is still in front. */
+    fun afterPauseStarted(endsAtMillis: Long) {
+        store.log("emergency pause started until $endsAtMillis")
+        hide()
+        schedulePauseEnd(endsAtMillis)
+    }
+
+    fun schedulePauseEnd(endsAtMillis: Long) {
+        pauseEndRecheck?.let(handler::removeCallbacks)
+        val recheck = Runnable {
+            store.log("emergency pause ended")
+            val front = rootInActiveWindow?.packageName?.toString()
+            if (front != null) evaluate(front, "pause ended", SystemClock.uptimeMillis(), attempt = 0)
+        }
+        pauseEndRecheck = recheck
+        handler.postDelayed(recheck, (endsAtMillis - System.currentTimeMillis()).coerceAtLeast(0) + 200)
     }
 
     private fun stopTest() {
@@ -325,6 +357,7 @@ class BlockerService : AccessibilityService() {
     }
 
     private fun hide() {
+        shownPackage = null
         handler.removeCallbacks(mediaGuard)
         pauseStartedAt = 0L
         focusTried = false
@@ -351,6 +384,16 @@ class BlockerService : AccessibilityService() {
 
     companion object {
         private const val FOREGROUND_ID = 4201
+
+        fun startPause(registry: BlockRegistry, length: PauseLength): Boolean {
+            val use = registry.startPause(length) ?: return false
+            instance?.afterPauseStarted(use.endsAtMillis)
+            return true
+        }
+
+        /** The blocked app the visible block screen is about, read by the block activity when it opens. */
+        @Volatile
+        var screenPackage: String? = null
         private const val HOME_DELAY_MILLIS = 2500L
         private const val HOME_THEN_ACTIVITY_MILLIS = 150L
         private const val HOME_THROTTLE_MILLIS = 700L
