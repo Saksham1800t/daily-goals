@@ -346,4 +346,8 @@
     <string name="messages_preview">Preview: %1$s</string>
     <string name="messages_reset">Reset to default</string>
     <string name="messages_attempts">Show today\'s attempts on the block screen</string>
+
+    <string name="failure_title">You missed %1$s</string>
+    <string name="failure_text">It is recorded as failed.</string>
+    <string name="failure_text_blocked">%1$s is blocked until %2$s.</string>
 </resources>

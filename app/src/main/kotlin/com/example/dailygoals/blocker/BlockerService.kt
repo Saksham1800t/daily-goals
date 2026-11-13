@@ -318,6 +318,14 @@ class BlockerService : AccessibilityService() {
     )
 
     /** Lifts every block for a while; at the end the block comes back if a blocked app is still in front. */
+    /** A block was added or removed: look at what is in front now instead of waiting for the next window event. */
+    fun recheckFront() {
+        handler.post {
+            val front = rootInActiveWindow?.packageName?.toString() ?: return@post
+            evaluate(front, "blocks changed", SystemClock.uptimeMillis(), attempt = 0)
+        }
+    }
+
     fun afterPauseStarted(endsAtMillis: Long) {
         store.log("emergency pause started until $endsAtMillis")
         hide()

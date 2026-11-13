@@ -41,6 +41,7 @@ class AlertActivity : ComponentActivity() {
         val date = intent.getStringExtra(ActionReceiver.EXTRA_DATE)?.let(LocalDate::parse)
         val title = intent.getStringExtra(EXTRA_TITLE).orEmpty()
         val text = intent.getStringExtra(EXTRA_TEXT).orEmpty()
+        val failure = intent.getBooleanExtra(EXTRA_FAILURE, false)
         setContent {
             SkritiTheme {
                 Column(
@@ -51,7 +52,7 @@ class AlertActivity : ComponentActivity() {
                     Text(title, fontSize = 30.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                     Text(text, fontSize = 17.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp))
                     Spacer(Modifier.height(32.dp))
-                    AccentButton(stringResource(R.string.warn_action_done), onClick = { markDone(goalId, date) })
+                    if (!failure) AccentButton(stringResource(R.string.warn_action_done), onClick = { markDone(goalId, date) })
                     Spacer(Modifier.height(16.dp))
                     Text(
                         text = stringResource(R.string.alert_open_app),
@@ -89,5 +90,6 @@ class AlertActivity : ComponentActivity() {
     companion object {
         const val EXTRA_TITLE = "title"
         const val EXTRA_TEXT = "text"
+        const val EXTRA_FAILURE = "failure"
     }
 }
