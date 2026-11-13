@@ -8,6 +8,7 @@ import com.example.dailygoals.model.GoalSchedule
 enum class GoalError {
     NAME_BLANK,
     NAME_TOO_LONG,
+    BLOCK_MESSAGE_TOO_LONG,
     NO_DAYS,
     WINDOW_OUT_OF_RANGE,
     WINDOW_END_NOT_AFTER_START,
@@ -54,6 +55,7 @@ object GoalValidator {
 
     fun validateDiscipline(discipline: GoalDiscipline, schedule: GoalSchedule): Set<GoalError> = buildSet {
         if (discipline.failOnWindowEnd && schedule.window == null) add(GoalError.WINDOW_RULE_NEEDS_WINDOW)
+        if ((discipline.blockMessage?.trim()?.length ?: 0) > BlockMessages.MAX_LENGTH) add(GoalError.BLOCK_MESSAGE_TOO_LONG)
     }
 
     /** An amount goal needs a unit, a positive target, and a minimum above 0 and not above the target. */

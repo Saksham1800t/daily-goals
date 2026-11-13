@@ -77,6 +77,15 @@ class GoalValidatorTest {
     }
 
     @Test
+    fun aBlockMessageOverOneHundredSixtyCharactersIsRefused() {
+        val ok = GoalDiscipline(blockMessage = "a".repeat(160))
+        val tooLong = GoalDiscipline(blockMessage = "a".repeat(161))
+        assertEquals(emptySet<GoalError>(), GoalValidator.validateDiscipline(ok, schedule))
+        assertEquals(setOf(GoalError.BLOCK_MESSAGE_TOO_LONG), GoalValidator.validateDiscipline(tooLong, schedule))
+        assertEquals(emptySet<GoalError>(), GoalValidator.validateDiscipline(GoalDiscipline(blockMessage = null), schedule))
+    }
+
+    @Test
     fun windowMustStayInsideOneDay() {
         val error = setOf(GoalError.WINDOW_OUT_OF_RANGE)
         assertEquals(error, GoalValidator.validateSchedule(schedule.copy(window = TimeWindow(-1, 60))))

@@ -1,7 +1,5 @@
 package com.example.dailygoals.ui.settings
 
-import android.content.Intent
-import android.content.pm.PackageManager
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
@@ -37,6 +35,8 @@ import com.example.dailygoals.engine.BlockMessages
 import com.example.dailygoals.engine.MessageCheck
 import com.example.dailygoals.ui.components.AppIconKind
 import com.example.dailygoals.ui.components.IconButtonBox
+import com.example.dailygoals.ui.components.InstalledApp
+import com.example.dailygoals.ui.components.loadInstalledApps
 
 @Composable
 private fun PageHeader(title: Int, onClose: () -> Unit) {
@@ -46,21 +46,13 @@ private fun PageHeader(title: Int, onClose: () -> Unit) {
     }
 }
 
-private class InstalledApp(val packageName: String, val label: String)
-
 @Composable
 fun SafeAppsScreen(onClose: () -> Unit, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val registry = remember { (context.applicationContext as SkritiApp).blocks }
     val changes by registry.changes.collectAsStateWithLifecycle()
     val safe = remember(changes) { registry.safeApps }
-    val installed = remember {
-        val pm = context.packageManager
-        pm.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), PackageManager.MATCH_ALL)
-            .map { InstalledApp(it.activityInfo.packageName, it.loadLabel(pm).toString()) }
-            .filter { it.packageName != context.packageName }
-            .distinctBy { it.packageName }
-    }
+    val installed = remember { loadInstalledApps(context) }
     val rows = remember(installed, safe) {
         val known = installed.map { it.packageName }.toSet()
         (installed + (safe - known).map { InstalledApp(it, it) }).sortedWith(compareByDescending<InstalledApp> { it.packageName in safe }.thenBy { it.label.lowercase() })
