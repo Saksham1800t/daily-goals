@@ -4,7 +4,8 @@ import android.app.Application
 import android.content.pm.ApplicationInfo
 import com.example.dailygoals.blocker.BlockRegistry
 import com.example.dailygoals.blocker.PocStore
-import com.example.dailygoals.blocker.PunishmentRunner
+import com.example.dailygoals.blocker.ScheduledBlockSync
+import com.example.dailygoals.blocker.BlockingRunner
 import com.example.dailygoals.data.AppDatabase
 import com.example.dailygoals.data.GoalRepository
 import com.example.dailygoals.data.SettingsStore
@@ -43,7 +44,7 @@ class SkritiApp : Application() {
 
     private val database: AppDatabase by lazy { AppDatabase.create(this) }
 
-    val repository: GoalRepository by lazy { GoalRepository(database, settings, clock, PunishmentRunner(this, blocks, FailureNotifier(this))) }
+    val repository: GoalRepository by lazy { GoalRepository(database, settings, clock, BlockingRunner(this, blocks, FailureNotifier(this))) }
 
     val backup: BackupService by lazy { BackupService(database, settings) }
 
@@ -54,7 +55,7 @@ class SkritiApp : Application() {
     val blocks: BlockRegistry by lazy { BlockRegistry(this) }
 
     val warnings: WarningRunner by lazy {
-        WarningRunner(repository, AlarmScheduler(this, permissions), permissions, WarningNotifier(this))
+        WarningRunner(repository, AlarmScheduler(this, permissions), permissions, WarningNotifier(this), ScheduledBlockSync(this, blocks))
     }
 
     @OptIn(FlowPreview::class)

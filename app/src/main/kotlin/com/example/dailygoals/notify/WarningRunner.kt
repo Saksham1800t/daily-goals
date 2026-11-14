@@ -1,5 +1,6 @@
 package com.example.dailygoals.notify
 
+import com.example.dailygoals.blocker.ScheduledBlockSync
 import com.example.dailygoals.data.GoalRepository
 import com.example.dailygoals.engine.DeliveryLevel
 import com.example.dailygoals.engine.DeliveryLevels
@@ -17,11 +18,14 @@ class WarningRunner(
     private val scheduler: AlarmScheduler,
     private val permissions: PermissionChecker,
     private val notifier: WarningNotifier,
+    private val blockSync: ScheduledBlockSync,
 ) {
     private val lock = Mutex()
 
     suspend fun run() = lock.withLock {
         repository.evaluate()
+        val scheduled = repository.scheduledBatch()
+        blockSync.apply(scheduled.blocks)
         val batch = repository.warningBatch()
         batch.resolvedToday.forEach(notifier::cancel)
         val state = permissions.deliveryState()
@@ -31,6 +35,7 @@ class WarningRunner(
             if (level != DeliveryLevel.IN_APP) notifier.post(goal, warning, level)
             repository.markWarningShown(warning, level)
         }
-        scheduler.scheduleIn(Duration.between(batch.now, batch.plan.nextWakeup))
+        val warningWait = Duration.between(batch.now, batch.plan.nextWakeup)
+        scheduler.scheduleIn(listOfNotNull(warningWait, scheduled.nextChangeIn).min())
     }
 }

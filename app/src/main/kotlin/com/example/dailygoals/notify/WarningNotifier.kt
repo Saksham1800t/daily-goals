@@ -52,7 +52,7 @@ class WarningNotifier(private val context: Context) {
     }
 
     fun cancel(goalId: Long) {
-        manager.activeNotifications.filter { it.id == goalId.toInt() }.forEach { manager.cancel(it.tag, it.id) }
+        manager.activeNotifications.filter { it.id == goalId.toInt() && !FailureNotifier.owns(it.tag) }.forEach { manager.cancel(it.tag, it.id) }
     }
 
     private fun openApp(): PendingIntent = PendingIntent.getActivity(

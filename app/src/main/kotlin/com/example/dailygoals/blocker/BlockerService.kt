@@ -29,6 +29,7 @@ import com.example.dailygoals.engine.ForegroundAction
 import com.example.dailygoals.engine.ForegroundRules
 import com.example.dailygoals.engine.PauseLength
 import com.example.dailygoals.notify.NotificationChannels
+import kotlinx.coroutines.launch
 
 /**
  * Listens for "a window came to the front" events. For each one it asks Android which window is really
@@ -254,6 +255,11 @@ class BlockerService : AccessibilityService() {
         shownPackage = blockedPackage
         screenPackage = blockedPackage
         registry.recordAttempt(blockedPackage)
+        registry.blockFor(blockedPackage)?.blocks?.let { blocks ->
+            val app = application as SkritiApp
+            val at = System.currentTimeMillis()
+            app.scope.launch { app.repository.recordAttempts(blocks, at) }
+        }
         shownAtUptime = SystemClock.uptimeMillis()
         if (store.pauseMedia) {
             pauseStartedAt = 0L
@@ -317,15 +323,17 @@ class BlockerService : AccessibilityService() {
         onPause = { length -> startPause(registry, length) },
     )
 
-    /** Lifts every block for a while; at the end the block comes back if a blocked app is still in front. */
     /** A block was added or removed: look at what is in front now instead of waiting for the next window event. */
     fun recheckFront() {
         handler.post {
+            val shown = shownPackage
+            if (shown != null && shown !in registry.blockedPackages()) hide()
             val front = rootInActiveWindow?.packageName?.toString() ?: return@post
             evaluate(front, "blocks changed", SystemClock.uptimeMillis(), attempt = 0)
         }
     }
 
+    /** Lifts every block for a while; at the end the block comes back if a blocked app is still in front. */
     fun afterPauseStarted(endsAtMillis: Long) {
         store.log("emergency pause started until $endsAtMillis")
         hide()

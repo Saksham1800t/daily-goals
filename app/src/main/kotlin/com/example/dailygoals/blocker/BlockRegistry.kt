@@ -11,6 +11,7 @@ import com.example.dailygoals.engine.ActiveBlock
 import com.example.dailygoals.engine.AppBlocks
 import com.example.dailygoals.engine.BlockCodec
 import com.example.dailygoals.engine.BlockKind
+import com.example.dailygoals.engine.BlockLift
 import com.example.dailygoals.engine.BlockMessages
 import com.example.dailygoals.engine.BlockSet
 import com.example.dailygoals.engine.EmergencyPause
@@ -46,7 +47,26 @@ class BlockRegistry(private val context: Context) {
         }
 
     fun addBlock(block: ActiveBlock) {
-        blocks = blocks.filterNot { it.goalId == block.goalId && it.packageName == block.packageName } + block
+        blocks = blocks.filterNot { it.goalId == block.goalId && it.packageName == block.packageName && it.kind == block.kind } + block
+    }
+
+    /** Scheduled blocks are rebuilt from the goals each time, so they are replaced as a set. */
+    fun replaceScheduled(scheduled: List<ActiveBlock>) {
+        val current = blocks
+        val next = current.filterNot { it.kind == BlockKind.SCHEDULED } + scheduled
+        if (next.toSet() != current.toSet()) blocks = next
+    }
+
+    /** Recent times when blocks did not apply. */
+    fun lifts(): List<BlockLift> = pauseUses.map { BlockLift(it.startedAtMillis, it.endsAtMillis) }
+
+    /** True the first time it is called for this goal and date, so a question is asked once. */
+    fun markAsked(goalId: Long, date: String): Boolean {
+        val key = "$goalId:$date"
+        val asked = prefs.getStringSet(KEY_ASKED, emptySet()).orEmpty()
+        if (key in asked) return false
+        prefs.edit().putStringSet(KEY_ASKED, (asked + key).sortedDescending().take(MAX_ASKED).toSet()).apply()
+        return true
     }
 
     fun removeFailure(goalId: Long, date: String) {
@@ -164,6 +184,8 @@ class BlockRegistry(private val context: Context) {
         private const val KEY_SCHEDULED_MESSAGE = "scheduled_message"
         private const val KEY_PUNISHMENT_MESSAGE = "punishment_message"
         private const val KEY_SHOW_ATTEMPTS = "show_attempts"
+        private const val KEY_ASKED = "asked_days"
+        private const val MAX_ASKED = 60
 
         private val AUTHENTICATORS = listOf(
             "com.google.android.apps.authenticator2",

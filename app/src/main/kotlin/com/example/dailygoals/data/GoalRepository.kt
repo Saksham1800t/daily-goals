@@ -1,6 +1,7 @@
 package com.example.dailygoals.data
 
 import androidx.room.withTransaction
+import com.example.dailygoals.engine.ActiveBlock
 import com.example.dailygoals.engine.AmountRules
 import com.example.dailygoals.engine.CheckAction
 import com.example.dailygoals.engine.CheckInRules
@@ -8,12 +9,14 @@ import com.example.dailygoals.engine.CheckResult
 import com.example.dailygoals.engine.Clock
 import com.example.dailygoals.engine.DeliveryLevel
 import com.example.dailygoals.engine.FailureEvaluator
+import com.example.dailygoals.engine.KeepOutcome
 import com.example.dailygoals.engine.Warning
 import com.example.dailygoals.engine.WarningPlan
 import com.example.dailygoals.engine.WarningPlanner
 import com.example.dailygoals.engine.PeriodStatus
 import com.example.dailygoals.engine.Periods
 import com.example.dailygoals.engine.QuotaRules
+import com.example.dailygoals.engine.ScheduledBlocks
 import com.example.dailygoals.engine.TimerRules
 import com.example.dailygoals.engine.ZoneChange
 import com.example.dailygoals.model.CheckIn
@@ -22,6 +25,7 @@ import com.example.dailygoals.model.FailReason
 import com.example.dailygoals.model.Goal
 import com.example.dailygoals.model.GoalState
 import com.example.dailygoals.model.isMet
+import java.time.Duration
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlinx.coroutines.flow.Flow
@@ -30,19 +34,22 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
+data class ScheduledBatch(val blocks: List<ActiveBlock>, val nextChangeIn: Duration?)
+
 data class WarningBatch(val plan: WarningPlan, val goals: Map<Long, Goal>, val resolvedToday: Set<Long>, val now: java.time.Instant)
 
 class GoalRepository(
     private val database: AppDatabase,
     private val settings: SettingsStore,
     private val clock: Clock,
-    private val punishments: PunishmentSink? = null,
+    private val punishments: BlockingHooks? = null,
 ) {
     private val goalDao = database.goalDao()
     private val checkInDao = database.checkInDao()
     private val amountLogDao = database.amountLogDao()
     private val periodDao = database.periodResultDao()
     private val warningDao = database.warningMarkDao()
+    private val attemptDao = database.blockAttemptDao()
     private val evaluationLock = Mutex()
 
     val goals: Flow<List<Goal>> = goalDao.observeAll().map { list -> list.map(GoalEntity::toModel) }
@@ -179,6 +186,37 @@ class GoalRepository(
         return existing?.punishmentSkipped ?: false
     }
 
+    /** The answer "I did not use it": keeps the day unless the user already marked it failed by hand. */
+    suspend fun answerKept(goalId: Long, date: LocalDate) = database.withTransaction {
+        val existing = checkInDao.find(goalId, date.toString())
+        val status = existing?.status ?: DayStatus.PENDING
+        val failedByRule = status == DayStatus.FAILED && existing?.failedReason != FailReason.MANUAL
+        if (status == DayStatus.PENDING || failedByRule) write(goalId, date, DayStatus.DONE, null, existing?.amount ?: 0, null, existing)
+    }
+
+    /** The scheduled blocks in force now, with end times on the real clock, and how long until one changes. */
+    suspend fun scheduledBatch(): ScheduledBatch {
+        val now = clock.now()
+        val offset = clockOffsetMillis()
+        val plan = ScheduledBlocks.plan(goalDao.all().map(GoalEntity::toModel), now, clock.zone)
+        val wait = plan.nextChange?.let { Duration.between(now.atZone(clock.zone).toInstant(), it) }
+        return ScheduledBatch(plan.active.map { it.copy(endsAtMillis = it.endsAtMillis - offset) }, wait)
+    }
+
+    suspend fun recordAttempts(blocks: List<ActiveBlock>, atMillis: Long) {
+        blocks.filter { it.goalId > 0 }.forEach {
+            attemptDao.insert(BlockAttemptEntity(goalId = it.goalId, packageName = it.packageName, kind = it.kind, attemptedAt = atMillis))
+        }
+    }
+
+    suspend fun attemptsToday(goalId: Long): Int {
+        val dayStart = LocalDate.now(clock.zone).atStartOfDay(clock.zone)
+        return attemptDao.count(goalId, dayStart.toInstant().toEpochMilli(), dayStart.plusDays(1).toInstant().toEpochMilli())
+    }
+
+    /** How far the app's clock is ahead of the real one; only a debug time shift makes this non-zero. */
+    private fun clockOffsetMillis(): Long = epochMillis() - System.currentTimeMillis()
+
     fun startTimer(goalId: Long) = settings.startTimer(goalId, epochMillis())
 
     /** Stops the timer and logs the whole minutes it ran for today; returns the minutes logged. */
@@ -200,13 +238,26 @@ class GoalRepository(
         val oldZone = state.zoneId?.let { runCatching { ZoneId.of(it) }.getOrNull() } ?: zone
         val neutral = state.neutralDates + ZoneChange.skippedDates(state.lastToday, now.atZone(zone).toInstant(), oldZone, zone)
         val dayEnd = settings.settings.value.dayEndMinute
+        val offset = clockOffsetMillis()
+        val lifts = punishments?.lifts().orEmpty().map { it.copy(startMillis = it.startMillis + offset, endMillis = it.endMillis + offset) }
+        val questions = mutableListOf<Pair<Goal, LocalDate>>()
         database.withTransaction {
             val models = goalDao.all().map(GoalEntity::toModel)
             val rows = checkInDao.all()
             val byKey = rows.associateBy { it.goalId to LocalDate.parse(it.date) }
+            val recorded = { goalId: Long, date: LocalDate -> byKey[goalId to date]?.status ?: DayStatus.PENDING }
+            val keeps = ScheduledBlocks.autoKeeps(models, recorded, now, zone, dayEnd, state.finalisedThrough, neutral, lifts)
+            keeps.forEach { keep ->
+                if (keep.outcome == KeepOutcome.KEEP) {
+                    write(keep.goalId, keep.date, DayStatus.DONE, null, 0, null, byKey[keep.goalId to keep.date])
+                } else {
+                    models.firstOrNull { it.id == keep.goalId }?.let { questions += it to keep.date }
+                }
+            }
+            val kept = keeps.filter { it.outcome == KeepOutcome.KEEP }.map { it.goalId to it.date }.toSet()
             val failures = FailureEvaluator.newFailures(
                 goals = models,
-                statusOf = { goalId, date -> byKey[goalId to date]?.status ?: DayStatus.PENDING },
+                statusOf = { goalId, date -> if (goalId to date in kept) DayStatus.DONE else recorded(goalId, date) },
                 now = now,
                 zone = zone,
                 dayEndMinute = dayEnd,
@@ -219,6 +270,7 @@ class GoalRepository(
             }
             judgeQuotaPeriods(models, rows, neutral, state.finalisedThrough)
         }
+        questions.forEach { (goal, date) -> punishments?.askWhetherUsed(goal, date) }
         settings.saveEvalState(
             state.copy(
                 finalisedThrough = FailureEvaluator.finalisedAfter(now, state.finalisedThrough),

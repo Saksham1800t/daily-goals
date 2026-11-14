@@ -1,20 +1,21 @@
 package com.example.dailygoals.blocker
 
 import android.content.Context
-import com.example.dailygoals.data.PunishmentSink
+import com.example.dailygoals.data.BlockingHooks
 import com.example.dailygoals.engine.ActiveBlock
 import com.example.dailygoals.engine.BlockKind
+import com.example.dailygoals.engine.BlockLift
 import com.example.dailygoals.engine.PunishmentRules
 import com.example.dailygoals.model.Goal
 import com.example.dailygoals.notify.FailureNotifier
 import java.time.LocalDate
 
-/** Carries out a goal's punishment when it fails: the notification, then the app blocks. */
-class PunishmentRunner(
+/** Carries out what the repository decides about blocks: a punishment on failure, and the question after a lift. */
+class BlockingRunner(
     private val context: Context,
     private val registry: BlockRegistry,
     private val notifier: FailureNotifier,
-) : PunishmentSink {
+) : BlockingHooks {
     override fun onFailed(goal: Goal, date: LocalDate, failedAtMillis: Long): Boolean {
         val plan = PunishmentRules.onFailure(
             intensity = goal.discipline.intensity,
@@ -35,6 +36,12 @@ class PunishmentRunner(
         }
         if (plan.notify) notifier.post(goal, date, plan)
         return plan.skippedByPause
+    }
+
+    override fun lifts(): List<BlockLift> = registry.lifts()
+
+    override fun askWhetherUsed(goal: Goal, date: LocalDate) {
+        if (registry.markAsked(goal.id, date.toString())) notifier.ask(goal, date)
     }
 
     override fun onCorrected(goalId: Long, date: LocalDate) {

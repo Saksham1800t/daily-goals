@@ -45,11 +45,16 @@ class ActionReceiver : BroadcastReceiver() {
         val action = when (intent.action) {
             ACTION_DONE -> CheckAction.TOGGLE_DONE
             ACTION_FAILED -> CheckAction.MARK_FAILED
+            ACTION_KEPT -> null
             else -> return
         }
         if (goalId == 0L) return
         goAsyncWork(context) { app ->
-            if (app.repository.statusOn(goalId, date) == DayStatus.PENDING) app.repository.applyAction(goalId, date, action)
+            when {
+                action == null -> app.repository.answerKept(goalId, date)
+                app.repository.statusOn(goalId, date) == DayStatus.PENDING -> app.repository.applyAction(goalId, date, action)
+            }
+            FailureNotifier(context).cancelQuestion(goalId, date)
             app.warnings.run()
         }
     }
@@ -57,6 +62,7 @@ class ActionReceiver : BroadcastReceiver() {
     companion object {
         const val ACTION_DONE = "com.example.dailygoals.ACTION_DONE"
         const val ACTION_FAILED = "com.example.dailygoals.ACTION_FAILED"
+        const val ACTION_KEPT = "com.example.dailygoals.ACTION_KEPT"
         const val EXTRA_GOAL_ID = "goal_id"
         const val EXTRA_DATE = "date"
     }
