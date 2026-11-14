@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,6 +31,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.dailygoals.R
 import com.example.dailygoals.SkritiApp
 import com.example.dailygoals.blocker.BlockScreens
+import com.example.dailygoals.blocker.PendingKeys
 import com.example.dailygoals.engine.BlockKind
 import com.example.dailygoals.engine.BlockMessages
 import com.example.dailygoals.engine.MessageCheck
@@ -37,9 +39,10 @@ import com.example.dailygoals.ui.components.AppIconKind
 import com.example.dailygoals.ui.components.IconButtonBox
 import com.example.dailygoals.ui.components.InstalledApp
 import com.example.dailygoals.ui.components.loadInstalledApps
+import kotlinx.coroutines.launch
 
 @Composable
-private fun PageHeader(title: Int, onClose: () -> Unit) {
+internal fun PageHeader(title: Int, onClose: () -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         IconButtonBox(AppIconKind.CLOSE, stringResource(R.string.form_close), onClose)
         Text(stringResource(title), fontSize = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 16.dp))
@@ -52,6 +55,8 @@ fun SafeAppsScreen(onClose: () -> Unit, modifier: Modifier = Modifier) {
     val registry = remember { (context.applicationContext as SkritiApp).blocks }
     val changes by registry.changes.collectAsStateWithLifecycle()
     val safe = remember(changes) { registry.safeApps }
+    val skriti = remember { context.applicationContext as SkritiApp }
+    val scope = rememberCoroutineScope()
     val installed = remember { loadInstalledApps(context) }
     val rows = remember(installed, safe) {
         val known = installed.map { it.packageName }.toSet()
@@ -60,6 +65,7 @@ fun SafeAppsScreen(onClose: () -> Unit, modifier: Modifier = Modifier) {
     Column(modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp)) {
         PageHeader(R.string.safe_apps_title, onClose)
         Text(stringResource(R.string.safe_apps_help), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 12.dp, bottom = 8.dp))
+        PendingChangesList(Modifier.padding(bottom = 8.dp)) { it.settingKey?.startsWith(PendingKeys.SAFE_APP_PREFIX) == true }
         rows.forEach { app ->
             Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
@@ -67,7 +73,7 @@ fun SafeAppsScreen(onClose: () -> Unit, modifier: Modifier = Modifier) {
                     Text(app.packageName, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Switch(checked = app.packageName in safe, onCheckedChange = { on ->
-                    registry.safeApps = if (on) safe + app.packageName else safe - app.packageName
+                    scope.launch { skriti.coolingOff.setSafeApp(app.packageName, on) }
                 })
             }
         }
@@ -108,6 +114,7 @@ fun BlockedAppsScreen(onClose: () -> Unit, modifier: Modifier = Modifier) {
                 }
             }
         }
+        PendingChangesList()
     }
 }
 
@@ -171,4 +178,4 @@ private fun MessageEditor(title: Int, saved: String, kind: BlockKind, onSave: (S
     }
 }
 
-enum class BlockingPage { BLOCKED_APPS, SAFE_APPS, MESSAGES }
+enum class BlockingPage { BLOCKED_APPS, SAFE_APPS, MESSAGES, TEMP_ACCESS }

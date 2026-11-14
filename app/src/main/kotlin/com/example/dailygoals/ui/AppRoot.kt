@@ -41,6 +41,7 @@ import com.example.dailygoals.ui.settings.BlockMessagesScreen
 import com.example.dailygoals.ui.settings.BlockingPage
 import com.example.dailygoals.ui.settings.PauseBanner
 import com.example.dailygoals.ui.settings.SafeAppsScreen
+import com.example.dailygoals.ui.settings.TempAccessScreen
 import com.example.dailygoals.ui.components.AppIcon
 import com.example.dailygoals.ui.components.AppIconKind
 import com.example.dailygoals.ui.day.DayScreen
@@ -92,6 +93,7 @@ fun AppRoot() {
             when (blockingPage) {
                 BlockingPage.BLOCKED_APPS -> BlockedAppsScreen(onClose = { blockingPage = null }, modifier = Modifier.weight(1f))
                 BlockingPage.SAFE_APPS -> SafeAppsScreen(onClose = { blockingPage = null }, modifier = Modifier.weight(1f))
+                BlockingPage.TEMP_ACCESS -> TempAccessScreen(onClose = { blockingPage = null }, modifier = Modifier.weight(1f))
                 else -> BlockMessagesScreen(onClose = { blockingPage = null }, modifier = Modifier.weight(1f))
             }
         } else if (showBlockTest) {

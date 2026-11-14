@@ -77,6 +77,9 @@ internal fun BlockAppsField(form: GoalFormState, viewModel: GoalFormViewModel) {
             )
         }
         ErrorText(form.errors, GoalError.BLOCK_MESSAGE_TOO_LONG, R.string.error_block_message_long)
+        CheckRow(form.allowTempAccess, R.string.temp_goal_switch, R.string.temp_goal_switch_help) { on ->
+            viewModel.edit { it.copy(allowTempAccess = on) }
+        }
         if (form.attemptsToday > 0) {
             Text(
                 pluralStringResource(R.plurals.attempts_today, form.attemptsToday, form.attemptsToday),

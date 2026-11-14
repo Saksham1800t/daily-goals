@@ -60,6 +60,10 @@ data class GoalFormState(
     val scheduledBlock: Boolean = false,
     val autoKeep: Boolean = true,
     val attemptsToday: Int = 0,
+    val allowTempAccess: Boolean = true,
+    val pendingId: Long? = null,
+    val pendingAt: Long? = null,
+    val pendingArchive: Boolean = false,
     val errors: Set<GoalError> = emptySet(),
     val original: Goal? = null,
 ) {
@@ -82,6 +86,7 @@ data class GoalFormState(
             blockMessage = blockMessage.trim().ifEmpty { null },
             scheduledBlockEnabled = scheduledBlock && canScheduleBlock,
             autoKeepAtWindowEnd = autoKeep,
+            allowTempAccess = allowTempAccess,
         )
 
     val avoidance: GoalAvoidance get() = GoalAvoidance(blockPackages)
@@ -122,6 +127,8 @@ class GoalFormViewModel(private val repository: GoalRepository, private val cloc
         if (goalId == 0L) return
         viewModelScope.launch {
             val goal = repository.goal(goalId) ?: return@launch
+            val attempts = repository.attemptsToday(goalId)
+            val pending = repository.pendingFor(goalId)
             val window = goal.schedule.window
             mutableState.update { current ->
                 if (current.goalId != goalId) return@update current
@@ -152,7 +159,11 @@ class GoalFormViewModel(private val repository: GoalRepository, private val cloc
                     blockPackages = goal.avoidance.temptingPackages,
                     scheduledBlock = goal.discipline.scheduledBlockEnabled,
                     autoKeep = goal.discipline.autoKeepAtWindowEnd,
-                    attemptsToday = repository.attemptsToday(goalId),
+                    attemptsToday = attempts,
+                    allowTempAccess = goal.discipline.allowTempAccess,
+                    pendingId = pending?.id,
+                    pendingAt = pending?.appliesAt,
+                    pendingArchive = pending != null && repository.isArchive(pending),
                     original = goal,
                 )
             }
@@ -182,7 +193,8 @@ class GoalFormViewModel(private val repository: GoalRepository, private val cloc
 
     private var saving = false
 
-    fun save(onSaved: () -> Unit) {
+    /** [onSaved] receives the time a held edit will apply, or null when the goal was saved at once. */
+    fun save(onSaved: (appliesAt: Long?) -> Unit) {
         if (saving) return
         val form = mutableState.value
         val errors = validate(form)
@@ -201,17 +213,25 @@ class GoalFormViewModel(private val repository: GoalRepository, private val cloc
             avoidance = form.avoidance,
         )
         viewModelScope.launch {
-            repository.save(goal)
+            val appliesAt = repository.save(goal)
             saving = false
-            onSaved()
+            onSaved(appliesAt)
         }
     }
 
-    fun delete(onDeleted: () -> Unit) {
+    fun cancelPending() {
+        val id = mutableState.value.pendingId ?: return
+        viewModelScope.launch {
+            repository.cancelPending(id)
+            mutableState.update { it.copy(pendingId = null, pendingAt = null, pendingArchive = false) }
+        }
+    }
+
+    fun delete(onDeleted: (appliesAt: Long?) -> Unit) {
         val goalId = mutableState.value.goalId
         viewModelScope.launch {
-            repository.archive(goalId)
-            onDeleted()
+            val appliesAt = repository.archive(goalId)
+            onDeleted(appliesAt)
         }
     }
 

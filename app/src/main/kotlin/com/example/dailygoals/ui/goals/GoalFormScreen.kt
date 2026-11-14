@@ -1,5 +1,6 @@
 package com.example.dailygoals.ui.goals
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -35,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -43,6 +45,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.dailygoals.blocker.BlockScreens
 import com.example.dailygoals.R
 import com.example.dailygoals.engine.GoalError
 import com.example.dailygoals.model.Frequency
@@ -64,6 +67,14 @@ private const val LAST_PICKABLE_HOUR = 23
 fun GoalFormScreen(viewModel: GoalFormViewModel, onClose: () -> Unit, modifier: Modifier = Modifier) {
     val form by viewModel.state.collectAsStateWithLifecycle()
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
+    val context = LocalContext.current
+    val closeAfter: (Long?) -> Unit = { appliesAt ->
+        if (appliesAt != null) {
+            val time = BlockScreens.untilText(appliesAt, System.currentTimeMillis())
+            Toast.makeText(context, context.getString(R.string.pending_toast, time), Toast.LENGTH_LONG).show()
+        }
+        onClose()
+    }
 
     Column(modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -75,10 +86,25 @@ fun GoalFormScreen(viewModel: GoalFormViewModel, onClose: () -> Unit, modifier: 
                 textAlign = TextAlign.Center,
                 modifier = Modifier.weight(1f),
             )
-            AccentButton(stringResource(R.string.form_save), onClick = { viewModel.save(onClose) })
+            AccentButton(stringResource(R.string.form_save), onClick = { viewModel.save(closeAfter) })
         }
         Spacer(Modifier.height(16.dp))
         GoalSentence(form)
+        form.pendingAt?.let { at ->
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 12.dp)) {
+                Text(
+                    text = if (form.pendingArchive) {
+                        stringResource(R.string.pending_form_delete, BlockScreens.untilText(at, System.currentTimeMillis()))
+                    } else {
+                        stringResource(R.string.pending_form_edit, BlockScreens.untilText(at, System.currentTimeMillis()))
+                    },
+                    fontSize = 13.5.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = viewModel::cancelPending) { Text(stringResource(R.string.pending_cancel)) }
+            }
+        }
 
         Field(R.string.form_name) {
             OutlinedTextField(
@@ -167,7 +193,7 @@ fun GoalFormScreen(viewModel: GoalFormViewModel, onClose: () -> Unit, modifier: 
             confirmButton = {
                 TextButton(onClick = {
                     confirmDelete = false
-                    viewModel.delete(onClose)
+                    viewModel.delete(closeAfter)
                 }) { Text(stringResource(R.string.form_delete_confirm), color = LocalStatusColors.current.failed) }
             },
             dismissButton = {

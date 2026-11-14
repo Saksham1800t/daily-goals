@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.dailygoals.R
 import com.example.dailygoals.SkritiApp
+import com.example.dailygoals.engine.CoolingOff
 import com.example.dailygoals.data.backup.Backup
 import com.example.dailygoals.data.backup.RestoreMode
 import com.example.dailygoals.ui.components.SectionLabel
@@ -105,7 +106,10 @@ fun SettingsScreen(
                 SettingsButton(stringResource(R.string.blocked_apps_title)) { onOpenBlockingPage(BlockingPage.BLOCKED_APPS) }
                 SettingsButton(stringResource(R.string.safe_apps_title)) { onOpenBlockingPage(BlockingPage.SAFE_APPS) }
             }
-            SettingsButton(stringResource(R.string.messages_title), Modifier.padding(top = 8.dp)) { onOpenBlockingPage(BlockingPage.MESSAGES) }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
+                SettingsButton(stringResource(R.string.messages_title)) { onOpenBlockingPage(BlockingPage.MESSAGES) }
+                SettingsButton(stringResource(R.string.temp_settings_title)) { onOpenBlockingPage(BlockingPage.TEMP_ACCESS) }
+            }
         }
 
         Group(R.string.settings_day) {
@@ -182,7 +186,12 @@ fun SettingsScreen(
                 Row {
                     TextButton(onClick = {
                         pending = null
-                        viewModel.restore(backup, RestoreMode.REPLACE) { message = context.getString(R.string.settings_restore_done) }
+                        val blocks = (context.applicationContext as SkritiApp).blocks.blocks
+                        if (CoolingOff.restoreAllowed(replace = true, blocks = blocks, nowMillis = System.currentTimeMillis())) {
+                            viewModel.restore(backup, RestoreMode.REPLACE) { message = context.getString(R.string.settings_restore_done) }
+                        } else {
+                            message = context.getString(R.string.settings_restore_refused)
+                        }
                     }) { Text(stringResource(R.string.settings_restore_replace)) }
                     TextButton(onClick = { pending = null }) { Text(stringResource(R.string.form_cancel)) }
                 }
