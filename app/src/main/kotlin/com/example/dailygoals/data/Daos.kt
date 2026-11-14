@@ -112,3 +112,54 @@ interface PeriodResultDao {
     @Query("DELETE FROM period_results")
     suspend fun deleteAll()
 }
+
+@Dao
+interface BlockAttemptDao {
+    @Insert
+    suspend fun insert(attempt: BlockAttemptEntity): Long
+
+    @Query("SELECT COUNT(*) FROM block_attempts WHERE goalId = :goalId AND attemptedAt >= :from AND attemptedAt < :until")
+    suspend fun count(goalId: Long, from: Long, until: Long): Int
+
+    @Query("DELETE FROM block_attempts")
+    suspend fun deleteAll()
+}
+
+@Dao
+interface TempAccessDao {
+    @Insert
+    suspend fun insert(use: TempAccessEntity): Long
+
+    @Query("UPDATE temp_access SET endedEarly = 1, endsAt = :endedAt WHERE startedAt = :startedAt AND packageName = :packageName")
+    suspend fun markEndedEarly(packageName: String, startedAt: Long, endedAt: Long)
+
+    @Query("SELECT * FROM temp_access ORDER BY startedAt DESC")
+    suspend fun all(): List<TempAccessEntity>
+
+    @Query("DELETE FROM temp_access")
+    suspend fun deleteAll()
+}
+
+@Dao
+interface PendingChangeDao {
+    @Query("SELECT * FROM pending_changes ORDER BY appliesAt, id")
+    fun observeAll(): Flow<List<PendingChangeEntity>>
+
+    @Query("SELECT * FROM pending_changes ORDER BY appliesAt, id")
+    suspend fun all(): List<PendingChangeEntity>
+
+    @Insert
+    suspend fun insert(change: PendingChangeEntity): Long
+
+    @Query("DELETE FROM pending_changes WHERE id = :id")
+    suspend fun delete(id: Long)
+
+    @Query("DELETE FROM pending_changes WHERE goalId = :goalId")
+    suspend fun deleteForGoal(goalId: Long)
+
+    @Query("DELETE FROM pending_changes WHERE settingKey = :key")
+    suspend fun deleteForSetting(key: String)
+
+    @Query("DELETE FROM pending_changes")
+    suspend fun deleteAll()
+}

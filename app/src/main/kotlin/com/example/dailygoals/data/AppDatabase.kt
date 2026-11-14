@@ -10,7 +10,10 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import java.io.File
 
 @Database(
-    entities = [GoalEntity::class, CheckInEntity::class, AmountLogEntity::class, PeriodResultEntity::class, WarningMarkEntity::class],
+    entities = [
+        GoalEntity::class, CheckInEntity::class, AmountLogEntity::class, PeriodResultEntity::class, WarningMarkEntity::class,
+        BlockAttemptEntity::class, TempAccessEntity::class, PendingChangeEntity::class,
+    ],
     version = AppDatabase.VERSION,
     exportSchema = true,
 )
@@ -20,10 +23,19 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun amountLogDao(): AmountLogDao
     abstract fun periodResultDao(): PeriodResultDao
     abstract fun warningMarkDao(): WarningMarkDao
+    abstract fun blockAttemptDao(): BlockAttemptDao
+    abstract fun tempAccessDao(): TempAccessDao
+    abstract fun pendingChangeDao(): PendingChangeDao
 
     companion object {
-        const val VERSION = 4
+        const val VERSION = 5
         private const val FILE_NAME = "daily_goals.db"
+
+        private val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                MigrationSql.V4_TO_V5.forEach(db::execSQL)
+            }
+        }
 
         private val MIGRATION_3_4 = object : Migration(3, 4) {
             override fun migrate(db: SupportSQLiteDatabase) {
@@ -47,7 +59,7 @@ abstract class AppDatabase : RoomDatabase() {
         fun create(context: Context): AppDatabase {
             backUpBeforeMigration(context)
             return Room.databaseBuilder(context, AppDatabase::class.java, FILE_NAME)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                 .build()
         }
 

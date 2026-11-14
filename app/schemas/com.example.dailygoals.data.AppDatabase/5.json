@@ -1,0 +1,789 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 5,
+    "identityHash": "fa03068df89bfb9dd7aac2e293d0044a",
+    "entities": [
+      {
+        "tableName": "goals",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `type` TEXT NOT NULL, `state` TEXT NOT NULL, `sortOrder` INTEGER NOT NULL, `frequencyType` TEXT NOT NULL, `activeDays` INTEGER NOT NULL, `windowStart` INTEGER, `windowEnd` INTEGER, `startDate` TEXT NOT NULL, `freqCount` INTEGER NOT NULL DEFAULT 1, `freqIntervalDays` INTEGER NOT NULL DEFAULT 2, `monthlyNth` TEXT NOT NULL DEFAULT 'FIRST', `monthlyWeekday` INTEGER NOT NULL DEFAULT 1, `quotaFailureMode` TEXT NOT NULL DEFAULT 'WHEN_UNREACHABLE', `graceMinutes` INTEGER NOT NULL DEFAULT 5, `failOnWindowEnd` INTEGER NOT NULL DEFAULT 0, `failOnDayEnd` INTEGER NOT NULL DEFAULT 0, `failOnManual` INTEGER NOT NULL DEFAULT 0, `punishmentIntensity` TEXT NOT NULL DEFAULT 'NONE', `blockMinutes` INTEGER NOT NULL DEFAULT 60, `blockMessage` TEXT, `scheduledBlockEnabled` INTEGER NOT NULL DEFAULT 0, `autoKeepAtWindowEnd` INTEGER NOT NULL DEFAULT 1, `allowTempAccess` INTEGER NOT NULL DEFAULT 1, `measureType` TEXT NOT NULL DEFAULT 'CHECK', `unit` TEXT NOT NULL DEFAULT '', `targetAmount` INTEGER NOT NULL DEFAULT 1, `minimumAmount` INTEGER NOT NULL DEFAULT 1, `minimumLabel` TEXT, `warningMode` TEXT NOT NULL DEFAULT 'NONE', `warningIntervalMin` INTEGER NOT NULL DEFAULT 10, `warningMinute` INTEGER NOT NULL DEFAULT 1200, `strongAlert` INTEGER NOT NULL DEFAULT 0, `temptingPackages` TEXT NOT NULL DEFAULT '')",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "type",
+            "columnName": "type",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "state",
+            "columnName": "state",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sortOrder",
+            "columnName": "sortOrder",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "schedule.frequencyType",
+            "columnName": "frequencyType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "schedule.activeDays",
+            "columnName": "activeDays",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "schedule.windowStart",
+            "columnName": "windowStart",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "schedule.windowEnd",
+            "columnName": "windowEnd",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "schedule.startDate",
+            "columnName": "startDate",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "schedule.freqCount",
+            "columnName": "freqCount",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "1"
+          },
+          {
+            "fieldPath": "schedule.freqIntervalDays",
+            "columnName": "freqIntervalDays",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "2"
+          },
+          {
+            "fieldPath": "schedule.monthlyNth",
+            "columnName": "monthlyNth",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "'FIRST'"
+          },
+          {
+            "fieldPath": "schedule.monthlyWeekday",
+            "columnName": "monthlyWeekday",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "1"
+          },
+          {
+            "fieldPath": "schedule.quotaFailureMode",
+            "columnName": "quotaFailureMode",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "'WHEN_UNREACHABLE'"
+          },
+          {
+            "fieldPath": "schedule.graceMinutes",
+            "columnName": "graceMinutes",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "5"
+          },
+          {
+            "fieldPath": "discipline.failOnWindowEnd",
+            "columnName": "failOnWindowEnd",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "discipline.failOnDayEnd",
+            "columnName": "failOnDayEnd",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "discipline.failOnManual",
+            "columnName": "failOnManual",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "discipline.punishmentIntensity",
+            "columnName": "punishmentIntensity",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "'NONE'"
+          },
+          {
+            "fieldPath": "discipline.blockMinutes",
+            "columnName": "blockMinutes",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "60"
+          },
+          {
+            "fieldPath": "discipline.blockMessage",
+            "columnName": "blockMessage",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "discipline.scheduledBlockEnabled",
+            "columnName": "scheduledBlockEnabled",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "discipline.autoKeepAtWindowEnd",
+            "columnName": "autoKeepAtWindowEnd",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "1"
+          },
+          {
+            "fieldPath": "discipline.allowTempAccess",
+            "columnName": "allowTempAccess",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "1"
+          },
+          {
+            "fieldPath": "measurement.measureType",
+            "columnName": "measureType",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "'CHECK'"
+          },
+          {
+            "fieldPath": "measurement.unit",
+            "columnName": "unit",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "''"
+          },
+          {
+            "fieldPath": "measurement.targetAmount",
+            "columnName": "targetAmount",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "1"
+          },
+          {
+            "fieldPath": "measurement.minimumAmount",
+            "columnName": "minimumAmount",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "1"
+          },
+          {
+            "fieldPath": "measurement.minimumLabel",
+            "columnName": "minimumLabel",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "reminder.warningMode",
+            "columnName": "warningMode",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "'NONE'"
+          },
+          {
+            "fieldPath": "reminder.warningIntervalMin",
+            "columnName": "warningIntervalMin",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "10"
+          },
+          {
+            "fieldPath": "reminder.warningMinute",
+            "columnName": "warningMinute",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "1200"
+          },
+          {
+            "fieldPath": "reminder.strongAlert",
+            "columnName": "strongAlert",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "avoidance.temptingPackages",
+            "columnName": "temptingPackages",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "''"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "check_ins",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `goalId` INTEGER NOT NULL, `date` TEXT NOT NULL, `status` TEXT NOT NULL, `failedReason` TEXT, `completedAt` INTEGER, `updatedAt` INTEGER NOT NULL, `amount` INTEGER NOT NULL DEFAULT 0, `lateMinutes` INTEGER, `punishmentSkipped` INTEGER NOT NULL DEFAULT 0, FOREIGN KEY(`goalId`) REFERENCES `goals`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "goalId",
+            "columnName": "goalId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "date",
+            "columnName": "date",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "failedReason",
+            "columnName": "failedReason",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "completedAt",
+            "columnName": "completedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "amount",
+            "columnName": "amount",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "lateMinutes",
+            "columnName": "lateMinutes",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "punishmentSkipped",
+            "columnName": "punishmentSkipped",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_check_ins_goalId_date",
+            "unique": true,
+            "columnNames": [
+              "goalId",
+              "date"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_check_ins_goalId_date` ON `${TABLE_NAME}` (`goalId`, `date`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "goals",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "goalId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "amount_logs",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `goalId` INTEGER NOT NULL, `date` TEXT NOT NULL, `delta` INTEGER NOT NULL, `loggedAt` INTEGER NOT NULL, FOREIGN KEY(`goalId`) REFERENCES `goals`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "goalId",
+            "columnName": "goalId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "date",
+            "columnName": "date",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "delta",
+            "columnName": "delta",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "loggedAt",
+            "columnName": "loggedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_amount_logs_goalId_date",
+            "unique": false,
+            "columnNames": [
+              "goalId",
+              "date"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_amount_logs_goalId_date` ON `${TABLE_NAME}` (`goalId`, `date`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "goals",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "goalId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "period_results",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `goalId` INTEGER NOT NULL, `periodStart` TEXT NOT NULL, `periodEnd` TEXT NOT NULL, `originalRequired` INTEGER NOT NULL, `adjustedRequired` INTEGER NOT NULL, `eligibleDays` INTEGER NOT NULL, `pausedDays` INTEGER NOT NULL DEFAULT 0, `rescuedDays` INTEGER NOT NULL DEFAULT 0, `completed` INTEGER NOT NULL, `status` TEXT NOT NULL, `failedAt` TEXT, `recalculatedAt` INTEGER NOT NULL, FOREIGN KEY(`goalId`) REFERENCES `goals`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "goalId",
+            "columnName": "goalId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "periodStart",
+            "columnName": "periodStart",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "periodEnd",
+            "columnName": "periodEnd",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "originalRequired",
+            "columnName": "originalRequired",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "adjustedRequired",
+            "columnName": "adjustedRequired",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "eligibleDays",
+            "columnName": "eligibleDays",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pausedDays",
+            "columnName": "pausedDays",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "rescuedDays",
+            "columnName": "rescuedDays",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "completed",
+            "columnName": "completed",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "failedAt",
+            "columnName": "failedAt",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "recalculatedAt",
+            "columnName": "recalculatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_period_results_goalId_periodStart",
+            "unique": true,
+            "columnNames": [
+              "goalId",
+              "periodStart"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_period_results_goalId_periodStart` ON `${TABLE_NAME}` (`goalId`, `periodStart`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "goals",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "goalId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "warning_marks",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `goalId` INTEGER NOT NULL, `date` TEXT NOT NULL, `lastIndex` INTEGER NOT NULL, `level` TEXT NOT NULL, `firedAt` INTEGER NOT NULL, FOREIGN KEY(`goalId`) REFERENCES `goals`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "goalId",
+            "columnName": "goalId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "date",
+            "columnName": "date",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastIndex",
+            "columnName": "lastIndex",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "level",
+            "columnName": "level",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "firedAt",
+            "columnName": "firedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_warning_marks_goalId_date",
+            "unique": true,
+            "columnNames": [
+              "goalId",
+              "date"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_warning_marks_goalId_date` ON `${TABLE_NAME}` (`goalId`, `date`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "goals",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "goalId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "block_attempts",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `goalId` INTEGER NOT NULL, `packageName` TEXT NOT NULL, `kind` TEXT NOT NULL, `attemptedAt` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "goalId",
+            "columnName": "goalId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "packageName",
+            "columnName": "packageName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "kind",
+            "columnName": "kind",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "attemptedAt",
+            "columnName": "attemptedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_block_attempts_goalId_attemptedAt",
+            "unique": false,
+            "columnNames": [
+              "goalId",
+              "attemptedAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_block_attempts_goalId_attemptedAt` ON `${TABLE_NAME}` (`goalId`, `attemptedAt`)"
+          }
+        ]
+      },
+      {
+        "tableName": "temp_access",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `packageName` TEXT NOT NULL, `goalIds` TEXT NOT NULL, `reason` TEXT NOT NULL, `startedAt` INTEGER NOT NULL, `endsAt` INTEGER NOT NULL, `minutes` INTEGER NOT NULL, `endedEarly` INTEGER NOT NULL DEFAULT 0)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "packageName",
+            "columnName": "packageName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "goalIds",
+            "columnName": "goalIds",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "reason",
+            "columnName": "reason",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startedAt",
+            "columnName": "startedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "endsAt",
+            "columnName": "endsAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "minutes",
+            "columnName": "minutes",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "endedEarly",
+            "columnName": "endedEarly",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_temp_access_startedAt",
+            "unique": false,
+            "columnNames": [
+              "startedAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_temp_access_startedAt` ON `${TABLE_NAME}` (`startedAt`)"
+          }
+        ]
+      },
+      {
+        "tableName": "pending_changes",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `goalId` INTEGER, `settingKey` TEXT, `newValue` TEXT NOT NULL, `appliesAt` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "goalId",
+            "columnName": "goalId",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "settingKey",
+            "columnName": "settingKey",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "newValue",
+            "columnName": "newValue",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "appliesAt",
+            "columnName": "appliesAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_pending_changes_appliesAt",
+            "unique": false,
+            "columnNames": [
+              "appliesAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_pending_changes_appliesAt` ON `${TABLE_NAME}` (`appliesAt`)"
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'fa03068df89bfb9dd7aac2e293d0044a')"
+    ]
+  }
+}

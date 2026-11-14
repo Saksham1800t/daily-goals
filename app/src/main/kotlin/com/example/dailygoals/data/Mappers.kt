@@ -44,6 +44,9 @@ fun GoalEntity.toModel(): Goal = Goal(
         intensity = discipline.punishmentIntensity,
         blockMinutes = discipline.blockMinutes,
         blockMessage = discipline.blockMessage,
+        scheduledBlockEnabled = discipline.scheduledBlockEnabled,
+        autoKeepAtWindowEnd = discipline.autoKeepAtWindowEnd,
+        allowTempAccess = discipline.allowTempAccess,
     ),
     measurement = GoalMeasurement(
         type = measurement.measureType,
@@ -87,6 +90,9 @@ fun Goal.toEntity(): GoalEntity = GoalEntity(
         punishmentIntensity = discipline.intensity,
         blockMinutes = discipline.blockMinutes,
         blockMessage = discipline.blockMessage?.trim()?.ifEmpty { null },
+        scheduledBlockEnabled = discipline.scheduledBlockEnabled,
+        autoKeepAtWindowEnd = discipline.autoKeepAtWindowEnd,
+        allowTempAccess = discipline.allowTempAccess,
     ),
     measurement = MeasurementColumns(
         measureType = measurement.type,

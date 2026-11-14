@@ -126,6 +126,9 @@ object BackupCodec {
         put("punishmentIntensity", goal.discipline.punishmentIntensity.name)
         put("blockMinutes", goal.discipline.blockMinutes)
         put("blockMessage", goal.discipline.blockMessage ?: JSONObject.NULL)
+        put("scheduledBlockEnabled", goal.discipline.scheduledBlockEnabled)
+        put("autoKeepAtWindowEnd", goal.discipline.autoKeepAtWindowEnd)
+        put("allowTempAccess", goal.discipline.allowTempAccess)
         put("temptingPackages", goal.avoidance.temptingPackages)
         put("measureType", goal.measurement.measureType.name)
         put("unit", goal.measurement.unit)
@@ -164,6 +167,9 @@ object BackupCodec {
             punishmentIntensity = Intensity.valueOf(json.optString("punishmentIntensity", "NONE")),
             blockMinutes = json.optInt("blockMinutes", 60),
             blockMessage = json.stringOrNull("blockMessage"),
+            scheduledBlockEnabled = json.optBoolean("scheduledBlockEnabled", false),
+            autoKeepAtWindowEnd = json.optBoolean("autoKeepAtWindowEnd", true),
+            allowTempAccess = json.optBoolean("allowTempAccess", true),
         ),
         measurement = MeasurementColumns(
             measureType = MeasureType.valueOf(json.optString("measureType", "CHECK")),

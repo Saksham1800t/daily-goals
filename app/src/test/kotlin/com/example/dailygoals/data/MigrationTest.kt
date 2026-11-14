@@ -77,6 +77,8 @@ class MigrationTest {
 
     private fun migrateToFour() = MigrationSql.V3_TO_V4.forEach(::execute)
 
+    private fun migrateToFive() = MigrationSql.V4_TO_V5.forEach(::execute)
+
     /** Builds a fresh database of [version] beside the migrated one and compares structure table by table. */
     private fun assertStructureEqualsFresh(version: Int) {
         val migrated = tableNames(version).associateWith(::structureOf)
@@ -156,6 +158,42 @@ class MigrationTest {
         assertEquals(listOf(2), query("SELECT COUNT(*) FROM goals") { it.getInt(1) })
         assertEquals(listOf(2), query("SELECT COUNT(*) FROM check_ins") { it.getInt(1) })
         assertStructureEqualsFresh(4)
+    }
+
+    @Test
+    fun versionFiveKeepsRowsAndLeavesScheduledBlockingOff() {
+        createVersion(4)
+        insertVersionOneData()
+        migrateToFive()
+        val goals = query("SELECT id, scheduledBlockEnabled, autoKeepAtWindowEnd, allowTempAccess FROM goals ORDER BY id") {
+            listOf(it.getInt(1), it.getInt(2), it.getInt(3), it.getInt(4))
+        }
+        assertEquals(listOf(listOf(1, 0, 1, 1), listOf(2, 0, 1, 1)), goals)
+        assertEquals(listOf(2), query("SELECT COUNT(*) FROM check_ins") { it.getInt(1) })
+        execute("INSERT INTO block_attempts (goalId, packageName, kind, attemptedAt) VALUES (2, 'com.a', 'SCHEDULED', 5)")
+        execute("INSERT INTO temp_access (packageName, goalIds, reason, startedAt, endsAt, minutes) VALUES ('com.a', '2', 'bank', 1, 2, 5)")
+        execute("INSERT INTO pending_changes (goalId, settingKey, newValue, appliesAt, createdAt) VALUES (2, NULL, '{}', 9, 1)")
+        assertEquals(listOf(0), query("SELECT endedEarly FROM temp_access") { it.getInt(1) })
+    }
+
+    @Test
+    fun versionFiveStructureEqualsAFreshVersionFiveDatabase() {
+        createVersion(4)
+        migrateToFive()
+        assertStructureEqualsFresh(5)
+    }
+
+    @Test
+    fun migratingStraightFromVersionOneToFiveKeepsEverything() {
+        createVersion(1)
+        insertVersionOneData()
+        migrate()
+        migrateToThree()
+        migrateToFour()
+        migrateToFive()
+        assertEquals(listOf(2), query("SELECT COUNT(*) FROM goals") { it.getInt(1) })
+        assertEquals(listOf(2), query("SELECT COUNT(*) FROM check_ins") { it.getInt(1) })
+        assertStructureEqualsFresh(5)
     }
 
     @Test

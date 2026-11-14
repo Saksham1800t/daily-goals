@@ -5,6 +5,22 @@ package com.example.dailygoals.data
  * Existing rows are kept; new columns get the defaults that match the Room entities.
  */
 object MigrationSql {
+    val V4_TO_V5: List<String> = listOf(
+        "ALTER TABLE `goals` ADD COLUMN `scheduledBlockEnabled` INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE `goals` ADD COLUMN `autoKeepAtWindowEnd` INTEGER NOT NULL DEFAULT 1",
+        "ALTER TABLE `goals` ADD COLUMN `allowTempAccess` INTEGER NOT NULL DEFAULT 1",
+        "CREATE TABLE IF NOT EXISTS `block_attempts` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `goalId` INTEGER NOT NULL, " +
+            "`packageName` TEXT NOT NULL, `kind` TEXT NOT NULL, `attemptedAt` INTEGER NOT NULL)",
+        "CREATE INDEX IF NOT EXISTS `index_block_attempts_goalId_attemptedAt` ON `block_attempts` (`goalId`, `attemptedAt`)",
+        "CREATE TABLE IF NOT EXISTS `temp_access` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `packageName` TEXT NOT NULL, " +
+            "`goalIds` TEXT NOT NULL, `reason` TEXT NOT NULL, `startedAt` INTEGER NOT NULL, `endsAt` INTEGER NOT NULL, " +
+            "`minutes` INTEGER NOT NULL, `endedEarly` INTEGER NOT NULL DEFAULT 0)",
+        "CREATE INDEX IF NOT EXISTS `index_temp_access_startedAt` ON `temp_access` (`startedAt`)",
+        "CREATE TABLE IF NOT EXISTS `pending_changes` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `goalId` INTEGER, " +
+            "`settingKey` TEXT, `newValue` TEXT NOT NULL, `appliesAt` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL)",
+        "CREATE INDEX IF NOT EXISTS `index_pending_changes_appliesAt` ON `pending_changes` (`appliesAt`)",
+    )
+
     val V3_TO_V4: List<String> = listOf(
         "ALTER TABLE `goals` ADD COLUMN `punishmentIntensity` TEXT NOT NULL DEFAULT 'NONE'",
         "ALTER TABLE `goals` ADD COLUMN `blockMinutes` INTEGER NOT NULL DEFAULT 60",

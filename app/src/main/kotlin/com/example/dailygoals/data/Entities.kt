@@ -6,6 +6,7 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import com.example.dailygoals.engine.BlockKind
 import com.example.dailygoals.engine.DeliveryLevel
 import com.example.dailygoals.engine.Intensity
 import com.example.dailygoals.engine.PeriodStatus
@@ -62,6 +63,9 @@ data class DisciplineColumns(
     @ColumnInfo(defaultValue = "'NONE'") val punishmentIntensity: Intensity,
     @ColumnInfo(defaultValue = "60") val blockMinutes: Int,
     val blockMessage: String?,
+    @ColumnInfo(defaultValue = "0") val scheduledBlockEnabled: Boolean = false,
+    @ColumnInfo(defaultValue = "1") val autoKeepAtWindowEnd: Boolean = true,
+    @ColumnInfo(defaultValue = "1") val allowTempAccess: Boolean = true,
 )
 
 /** Package names, one per line. */
@@ -150,4 +154,38 @@ data class PeriodResultEntity(
     val status: PeriodStatus,
     val failedAt: String?,
     val recalculatedAt: Long,
+)
+
+/** One try to open a blocked app. An attempt is never a failure. */
+@Entity(tableName = "block_attempts", indices = [Index(value = ["goalId", "attemptedAt"])])
+data class BlockAttemptEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val goalId: Long,
+    val packageName: String,
+    val kind: BlockKind,
+    val attemptedAt: Long,
+)
+
+/** One use of temporary access; [goalIds] is a comma-separated list of the goals that blocked the app. */
+@Entity(tableName = "temp_access", indices = [Index(value = ["startedAt"])])
+data class TempAccessEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val packageName: String,
+    val goalIds: String,
+    val reason: String,
+    val startedAt: Long,
+    val endsAt: Long,
+    val minutes: Int,
+    @ColumnInfo(defaultValue = "0") val endedEarly: Boolean = false,
+)
+
+/** A change that would weaken a running block, held until that block ends. */
+@Entity(tableName = "pending_changes", indices = [Index(value = ["appliesAt"])])
+data class PendingChangeEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val goalId: Long?,
+    val settingKey: String?,
+    val newValue: String,
+    val appliesAt: Long,
+    val createdAt: Long,
 )
