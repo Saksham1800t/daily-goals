@@ -321,7 +321,22 @@ class BlockerService : AccessibilityService() {
         onGoHome = { goHome("go home button") },
         onStopTest = ::stopTest,
         onPause = { length -> startPause(registry, length) },
+        onTempAccess = ::openTempAccess,
     )
+
+    /** The steps need a keyboard, so they run in their own screen; the block comes back if they are left. */
+    private fun openTempAccess() {
+        val target = shownPackage ?: screenPackage ?: return
+        launchPendingUntil = SystemClock.uptimeMillis() + LAUNCH_PENDING_MILLIS
+        hide()
+        TempAccessActivity.start(this, target)
+    }
+
+    fun afterTempAccessStarted(endsAtMillis: Long) {
+        store.log("temporary access started until $endsAtMillis")
+        hide()
+        handler.postDelayed({ recheckFront() }, (endsAtMillis - System.currentTimeMillis()).coerceAtLeast(0) + 200)
+    }
 
     /** A block was added or removed: look at what is in front now instead of waiting for the next window event. */
     fun recheckFront() {

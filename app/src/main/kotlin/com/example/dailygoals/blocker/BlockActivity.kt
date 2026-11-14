@@ -27,6 +27,10 @@ class BlockActivity : ComponentActivity() {
                 BlockerService.startPause(app.blocks, length)
                 finish()
             },
+            onTempAccess = {
+                BlockerService.screenPackage?.let { TempAccessActivity.start(this, it) }
+                finish()
+            },
         )
         val view = BlockScreens.view(this, app.blocks, BlockerService.screenPackage, actions)
         if (view == null) {

@@ -97,6 +97,18 @@
             android:permission="android.permission.BIND_JOB_SERVICE" />
 
         <activity
+            android:name=".blocker.TempAccessActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:taskAffinity=""
+            android:theme="@style/Theme.Skriti"
+            android:windowSoftInputMode="adjustResize" />
+
+        <receiver
+            android:name=".blocker.TempAccessReceiver"
+            android:exported="false" />
+
+        <activity
             android:name=".blocker.BlockActivity"
             android:excludeFromRecents="true"
             android:exported="false"

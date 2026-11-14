@@ -6,6 +6,7 @@ import com.example.dailygoals.R
 import com.example.dailygoals.engine.AppBlocks
 import com.example.dailygoals.engine.BlockMessages
 import com.example.dailygoals.engine.MessageValues
+import com.example.dailygoals.engine.TempAccessOffer
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -21,6 +22,8 @@ data class BlockScreenModel(
     val alsoBlockedBy: List<String>,
     val isTest: Boolean,
     val pauseAvailable: Boolean,
+    val tempAccess: TempAccessOffer,
+    val tempForbiddenBy: String?,
 )
 
 object BlockScreens {
@@ -53,6 +56,8 @@ object BlockScreens {
             alsoBlockedBy = blocks.others.map { context.getString(R.string.block_also_line, it.goalName, untilText(it.endsAtMillis, nowMillis)) },
             isTest = longest.goalId == TEST_GOAL_ID,
             pauseAvailable = registry.canStartPause(nowMillis),
+            tempAccess = registry.tempOffer(blocks, nowMillis),
+            tempForbiddenBy = blocks.blocks.firstOrNull { !it.allowTempAccess }?.goalName,
         )
     }
 

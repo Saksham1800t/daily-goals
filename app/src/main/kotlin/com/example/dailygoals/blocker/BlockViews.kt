@@ -15,6 +15,7 @@ import android.widget.TextView
 import com.example.dailygoals.R
 import com.example.dailygoals.engine.EmergencyPause
 import com.example.dailygoals.engine.PauseLength
+import com.example.dailygoals.engine.TempAccessOffer
 
 private const val BACKGROUND = 0xFF0C0A14.toInt()
 private const val TEXT = 0xFFF6F4FF.toInt()
@@ -28,6 +29,7 @@ class BlockViewActions(
     val onGoHome: () -> Unit,
     val onStopTest: () -> Unit,
     val onPause: (PauseLength) -> Unit,
+    val onTempAccess: () -> Unit,
 )
 
 /**
@@ -124,6 +126,16 @@ fun buildBlockView(context: Context, model: BlockScreenModel, actions: BlockView
     )
     if (model.isTest) {
         root.addView(button(context.getString(R.string.poc_block_stop), filled = false, onClick = actions.onStopTest))
+    }
+    when (model.tempAccess) {
+        TempAccessOffer.AVAILABLE -> root.addView(
+            button(context.getString(R.string.temp_button), filled = false, onClick = actions.onTempAccess),
+            LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) },
+        )
+        TempAccessOffer.NONE_LEFT -> root.addView(label(context.getString(R.string.temp_none_left), 12f, TEXT_SECONDARY, top = 16))
+        TempAccessOffer.GOAL_FORBIDS ->
+            root.addView(label(context.getString(R.string.temp_goal_forbids, model.tempForbiddenBy.orEmpty()), 12f, TEXT_SECONDARY, top = 16))
+        TempAccessOffer.OFF -> root.addView(label(context.getString(R.string.temp_off), 12f, TEXT_SECONDARY, top = 16))
     }
     if (model.pauseAvailable) {
         root.addView(label(context.getString(R.string.block_pause_hint), 12f, TEXT_SECONDARY, top = 28))

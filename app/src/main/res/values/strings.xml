@@ -384,4 +384,45 @@
     <string name="keep_question_text">A block was lifted during this goal\'s blocked time. Did you use the app?</string>
     <string name="keep_question_no">No, I kept it</string>
     <string name="keep_question_yes">Yes, I used it</string>
+
+    <string name="temp_button">I need this app</string>
+    <string name="temp_none_left">No temporary access left today</string>
+    <string name="temp_off">Temporary access is switched off</string>
+    <string name="temp_goal_forbids">Temporary access is off for the goal %1$s</string>
+    <string name="temp_title">Temporary access to %1$s</string>
+    <plurals name="temp_uses_left">
+        <item quantity="one">%1$d use left today, for all apps together</item>
+        <item quantity="other">%1$d uses left today, for all apps together</item>
+    </plurals>
+    <string name="temp_wait_seconds">%1$d s</string>
+    <string name="temp_wait_help">This wait is on purpose. Close this screen if you do not really need the app.</string>
+    <string name="temp_reason">Why do you need it?</string>
+    <string name="temp_reason_needed">Type a reason to continue.</string>
+    <string name="temp_minutes">Unlock for</string>
+    <string name="temp_unlock">Unlock for %1$d min</string>
+    <string name="temp_cancel">Cancel</string>
+    <string name="temp_notice_title">%1$s is unlocked for a short time</string>
+    <string name="temp_notice_text">The block comes back when the time is up.</string>
+    <string name="temp_lock_now">Lock again now</string>
+    <string name="temp_settings_title">Temporary access</string>
+    <string name="temp_settings_help">Unlocks one blocked app for a few minutes after a wait and a typed reason. The uses per day count for all apps together.</string>
+    <string name="temp_settings_on">Temporary access</string>
+    <string name="temp_settings_uses">Uses per day</string>
+    <string name="temp_settings_minutes">Longest unlock</string>
+    <string name="temp_settings_wait">Wait before it starts</string>
+    <string name="temp_settings_seconds">%1$d s</string>
+    <string name="temp_goal_switch">Allow temporary access for this goal\'s blocks</string>
+    <string name="temp_goal_switch_help">When off, the block screen offers no temporary access for these apps.</string>
+    <string name="pending_title">Pending changes</string>
+    <string name="pending_help">A change that would weaken a running block waits until that block ends.</string>
+    <string name="pending_goal_edit">Edit of %1$s</string>
+    <string name="pending_goal_delete">%1$s ends after the current block</string>
+    <string name="pending_temp_settings">Looser temporary access limits</string>
+    <string name="pending_safe_app">%1$s becomes always allowed</string>
+    <string name="pending_applies_at">Applies at %1$s</string>
+    <string name="pending_cancel">Cancel</string>
+    <string name="pending_form_edit">Pending change: applies at %1$s</string>
+    <string name="pending_form_delete">Ends after the current block, at %1$s</string>
+    <string name="pending_toast">A block is running, so this change applies at %1$s.</string>
+    <string name="settings_restore_refused">A block is running. Replacing all data has to wait until it ends; merging is still possible.</string>
 </resources>
