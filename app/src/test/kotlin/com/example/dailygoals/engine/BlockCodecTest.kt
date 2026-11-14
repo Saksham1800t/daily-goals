@@ -25,6 +25,9 @@ class BlockCodecTest {
         val uses = listOf(TempAccessUse("com.instagram.android", 1_000, 2_000), TempAccessUse("com.youtube", 5_000, 9_000))
         assertEquals(uses, BlockCodec.decodeTempUses(BlockCodec.encodeTempUses(uses)))
         assertEquals(emptyList<TempAccessUse>(), BlockCodec.decodeTempUses("x"))
+        val settings = TempAccessSettings(enabled = false, maxUsesPerDay = 4, maxMinutes = 25, waitSeconds = 90)
+        assertEquals(settings, BlockCodec.decodeTempSettings(BlockCodec.encodeTempSettings(settings)))
+        assertEquals(null, BlockCodec.decodeTempSettings("1,2"))
     }
 
     @Test

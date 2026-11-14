@@ -36,6 +36,12 @@ object BlockCodec {
         runCatching { line.split('\t').let { TempAccessUse(dec(it[0]), it[1].toLong(), it[2].toLong()) } }.getOrNull()
     }
 
+    fun encodeTempSettings(s: TempAccessSettings): String = listOf(if (s.enabled) 1 else 0, s.maxUsesPerDay, s.maxMinutes, s.waitSeconds).joinToString(",")
+
+    fun decodeTempSettings(text: String): TempAccessSettings? = runCatching {
+        text.split(',').map { it.trim().toInt() }.let { TempAccessSettings(it[0] == 1, it[1], it[2], it[3]).clamped() }
+    }.getOrNull()
+
     fun encodePackages(packages: Set<String>): String = packages.sorted().joinToString("\n")
 
     fun decodePackages(text: String): Set<String> = text.lines().map { it.trim() }.filter { it.isNotEmpty() }.toSet()
