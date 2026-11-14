@@ -18,6 +18,14 @@ class BlockSetTest {
         BlockSet.blockFor(pkg, blocks, safe, own, paused, now)
 
     @Test
+    fun temporaryAccessUnlocksOnlyTheChosenApp() {
+        val youtube = wake.copy(packageName = "com.youtube")
+        val blocks = listOf(wake, youtube)
+        assertNull(BlockSet.blockFor(insta, blocks, safe, own, pauseActive = false, nowMillis = 1_000, unlocked = setOf(insta)))
+        assertNotNull(BlockSet.blockFor("com.youtube", blocks, safe, own, pauseActive = false, nowMillis = 1_000, unlocked = setOf(insta)))
+    }
+
+    @Test
     fun anAppWithNoActiveBlockOpensNormally() {
         assertNull(blockFor("com.youtube", listOf(wake)))
         assertNull(blockFor(insta, listOf(wake), now = 8_000))

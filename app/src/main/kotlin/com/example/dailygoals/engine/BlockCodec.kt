@@ -13,14 +13,14 @@ object BlockCodec {
     private fun dec(value: String) = URLDecoder.decode(value, "UTF-8")
 
     fun encodeBlocks(blocks: List<ActiveBlock>): String = blocks.joinToString("\n") {
-        listOf(it.goalId.toString(), enc(it.goalName), enc(it.packageName), it.kind.name, it.endsAtMillis.toString(), enc(it.message.orEmpty()), enc(it.sourceDate.orEmpty()))
+        listOf(it.goalId.toString(), enc(it.goalName), enc(it.packageName), it.kind.name, it.endsAtMillis.toString(), enc(it.message.orEmpty()), enc(it.sourceDate.orEmpty()), if (it.allowTempAccess) "1" else "0")
             .joinToString("\t")
     }
 
     fun decodeBlocks(text: String): List<ActiveBlock> = text.lines().mapNotNull { line ->
         runCatching {
             val f = line.split('\t')
-            ActiveBlock(f[0].toLong(), dec(f[1]), dec(f[2]), BlockKind.valueOf(f[3]), f[4].toLong(), dec(f[5]).ifEmpty { null }, f.getOrNull(6)?.let(::dec)?.ifEmpty { null })
+            ActiveBlock(f[0].toLong(), dec(f[1]), dec(f[2]), BlockKind.valueOf(f[3]), f[4].toLong(), dec(f[5]).ifEmpty { null }, f.getOrNull(6)?.let(::dec)?.ifEmpty { null }, f.getOrNull(7) != "0")
         }.getOrNull()
     }
 
@@ -28,6 +28,12 @@ object BlockCodec {
 
     fun decodeUses(text: String): List<PauseUse> = text.lines().mapNotNull { line ->
         runCatching { line.split('\t').let { PauseUse(it[0].toLong(), it[1].toLong()) } }.getOrNull()
+    }
+
+    fun encodeTempUses(uses: List<TempAccessUse>): String = uses.joinToString("\n") { "${enc(it.packageName)}\t${it.startedAtMillis}\t${it.endsAtMillis}" }
+
+    fun decodeTempUses(text: String): List<TempAccessUse> = text.lines().mapNotNull { line ->
+        runCatching { line.split('\t').let { TempAccessUse(dec(it[0]), it[1].toLong(), it[2].toLong()) } }.getOrNull()
     }
 
     fun encodePackages(packages: Set<String>): String = packages.sorted().joinToString("\n")

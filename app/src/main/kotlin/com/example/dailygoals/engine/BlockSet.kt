@@ -12,6 +12,8 @@ data class ActiveBlock(
     val message: String? = null,
     /** The date of the failure that caused a punishment block, so correcting that day ends exactly that block. */
     val sourceDate: String? = null,
+    /** False when the goal has switched temporary access off for its blocks. */
+    val allowTempAccess: Boolean = true,
 )
 
 /** Everything that blocks one app right now, ordered by when each block ends; [longest] ends last. */
@@ -43,8 +45,9 @@ object BlockSet {
         ownPackage: String,
         pauseActive: Boolean,
         nowMillis: Long,
+        unlocked: Set<String> = emptySet(),
     ): AppBlocks? {
-        if (pauseActive) return null
+        if (pauseActive || packageName in unlocked) return null
         return conflicts(blocks, safeApps, ownPackage, nowMillis).firstOrNull { it.packageName == packageName }
     }
 
