@@ -34,6 +34,9 @@ class BackupService(private val database: AppDatabase, private val settings: Set
             val logs = database.amountLogDao()
             val periods = database.periodResultDao()
             if (mode == RestoreMode.REPLACE) {
+                database.pendingChangeDao().deleteAll()
+                database.blockAttemptDao().deleteAll()
+                database.tempAccessDao().deleteAll()
                 periods.deleteAll()
                 logs.deleteAll()
                 checkIns.deleteAll()

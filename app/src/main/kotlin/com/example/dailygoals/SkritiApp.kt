@@ -6,6 +6,7 @@ import com.example.dailygoals.blocker.BlockRegistry
 import com.example.dailygoals.blocker.PocStore
 import com.example.dailygoals.blocker.ScheduledBlockSync
 import com.example.dailygoals.blocker.BlockingRunner
+import com.example.dailygoals.blocker.CoolingOffGate
 import com.example.dailygoals.data.AppDatabase
 import com.example.dailygoals.data.GoalRepository
 import com.example.dailygoals.data.SettingsStore
@@ -53,6 +54,8 @@ class SkritiApp : Application() {
     val pocStore: PocStore by lazy { PocStore(this, blocks) }
 
     val blocks: BlockRegistry by lazy { BlockRegistry(this) }
+
+    val coolingOff: CoolingOffGate by lazy { CoolingOffGate(blocks, repository) }
 
     val warnings: WarningRunner by lazy {
         WarningRunner(repository, AlarmScheduler(this, permissions), permissions, WarningNotifier(this), ScheduledBlockSync(this, blocks))

@@ -1,12 +1,15 @@
 package com.example.dailygoals.data
 
 import androidx.room.withTransaction
+import com.example.dailygoals.data.backup.BackupCodec
 import com.example.dailygoals.engine.ActiveBlock
 import com.example.dailygoals.engine.AmountRules
+import com.example.dailygoals.engine.BlockKind
 import com.example.dailygoals.engine.CheckAction
 import com.example.dailygoals.engine.CheckInRules
 import com.example.dailygoals.engine.CheckResult
 import com.example.dailygoals.engine.Clock
+import com.example.dailygoals.engine.CoolingOff
 import com.example.dailygoals.engine.DeliveryLevel
 import com.example.dailygoals.engine.FailureEvaluator
 import com.example.dailygoals.engine.KeepOutcome
@@ -17,6 +20,7 @@ import com.example.dailygoals.engine.PeriodStatus
 import com.example.dailygoals.engine.Periods
 import com.example.dailygoals.engine.QuotaRules
 import com.example.dailygoals.engine.ScheduledBlocks
+import com.example.dailygoals.engine.TempAccessUse
 import com.example.dailygoals.engine.TimerRules
 import com.example.dailygoals.engine.ZoneChange
 import com.example.dailygoals.model.CheckIn
@@ -50,6 +54,8 @@ class GoalRepository(
     private val periodDao = database.periodResultDao()
     private val warningDao = database.warningMarkDao()
     private val attemptDao = database.blockAttemptDao()
+    private val tempAccessDao = database.tempAccessDao()
+    private val pendingDao = database.pendingChangeDao()
     private val evaluationLock = Mutex()
 
     val goals: Flow<List<Goal>> = goalDao.observeAll().map { list -> list.map(GoalEntity::toModel) }
@@ -59,17 +65,79 @@ class GoalRepository(
     /** Goal id to the epoch millis at which its running timer started. */
     val timers: StateFlow<Map<Long, Long>> = settings.timers
 
+    val pendingChanges: Flow<List<PendingChangeEntity>> = pendingDao.observeAll()
+
     suspend fun goal(id: Long): Goal? = goalDao.find(id)?.toModel()
 
-    suspend fun save(goal: Goal) {
+    /**
+     * Saves the goal. An edit that would weaken one of the goal's running blocks is held until that block
+     * ends; the return value is then the real time it will apply, and null means it applied now. The
+     * latest save always replaces an edit that was still waiting.
+     */
+    suspend fun save(goal: Goal): Long? {
         if (goal.id == 0L) {
             goalDao.insert(goal.copy(sortOrder = goalDao.nextSortOrder()).toEntity())
-        } else {
+            return null
+        }
+        val appliesAt = editAppliesAt(goal)
+        pendingDao.deleteForGoal(goal.id)
+        if (appliesAt == null) {
             goalDao.update(goal.toEntity())
+        } else {
+            pendingDao.insert(
+                PendingChangeEntity(goalId = goal.id, settingKey = null, newValue = BackupCodec.encodeGoal(goal.toEntity()), appliesAt = appliesAt, createdAt = System.currentTimeMillis()),
+            )
+        }
+        return appliesAt
+    }
+
+    private suspend fun editAppliesAt(new: Goal): Long? {
+        val old = goalDao.find(new.id)?.toModel() ?: return null
+        val now = clock.now()
+        val instant = now.atZone(clock.zone).toInstant()
+        val weakenings = CoolingOff.weakenings(old, new, now.toLocalDate())
+        val scheduledEnd = ScheduledBlocks.span(old, now.toLocalDate(), clock.zone)
+            ?.takeIf { instant >= it.first && instant < it.second }
+            ?.let { it.second.toEpochMilli() - clockOffsetMillis() }
+        val punishmentEnds = punishments?.activeBlocks().orEmpty()
+            .filter { it.goalId == old.id && it.kind == BlockKind.PUNISHMENT }
+            .map { it.endsAtMillis }
+        return CoolingOff.goalEditAppliesAt(weakenings, punishmentEnds + listOfNotNull(scheduledEnd), System.currentTimeMillis())
+    }
+
+    /** Archiving during one of the goal's blocks waits like any other weakening edit. */
+    suspend fun archive(id: Long): Long? {
+        val goal = goalDao.find(id)?.toModel() ?: return null
+        return save(goal.copy(state = GoalState.ARCHIVED))
+    }
+
+    suspend fun pendingFor(goalId: Long): PendingChangeEntity? = pendingDao.all().firstOrNull { it.goalId == goalId }
+
+    fun isArchive(change: PendingChangeEntity): Boolean =
+        runCatching { BackupCodec.decodeGoal(change.newValue).state == GoalState.ARCHIVED }.getOrDefault(false)
+
+    suspend fun queueSetting(key: String, value: String, appliesAt: Long) {
+        pendingDao.deleteForSetting(key)
+        pendingDao.insert(PendingChangeEntity(goalId = null, settingKey = key, newValue = value, appliesAt = appliesAt, createdAt = System.currentTimeMillis()))
+    }
+
+    suspend fun cancelPendingSetting(key: String) = pendingDao.deleteForSetting(key)
+
+    suspend fun cancelPending(id: Long) = pendingDao.delete(id)
+
+    /** Applies every held change whose block has ended. */
+    suspend fun applyDuePending() {
+        val now = System.currentTimeMillis()
+        pendingDao.all().filter { it.appliesAt <= now }.forEach { change ->
+            if (change.goalId != null) {
+                runCatching { BackupCodec.decodeGoal(change.newValue) }.getOrNull()?.let { goalDao.update(it) }
+            } else {
+                change.settingKey?.let { punishments?.applySetting(it, change.newValue) }
+            }
+            pendingDao.delete(change.id)
         }
     }
 
-    suspend fun archive(id: Long) = goalDao.setState(id, GoalState.ARCHIVED)
 
     suspend fun applyAction(goalId: Long, date: LocalDate, action: CheckAction): CheckResult = database.withTransaction {
         val goal = goalDao.find(goalId)?.toModel() ?: return@withTransaction CheckResult.NoChange
@@ -200,7 +268,8 @@ class GoalRepository(
         val offset = clockOffsetMillis()
         val plan = ScheduledBlocks.plan(goalDao.all().map(GoalEntity::toModel), now, clock.zone)
         val wait = plan.nextChange?.let { Duration.between(now.atZone(clock.zone).toInstant(), it) }
-        return ScheduledBatch(plan.active.map { it.copy(endsAtMillis = it.endsAtMillis - offset) }, wait)
+        val pendingWait = pendingDao.all().minOfOrNull { it.appliesAt }?.let { Duration.ofMillis((it - System.currentTimeMillis()).coerceAtLeast(0)) }
+        return ScheduledBatch(plan.active.map { it.copy(endsAtMillis = it.endsAtMillis - offset) }, listOfNotNull(wait, pendingWait).minOrNull())
     }
 
     suspend fun recordAttempts(blocks: List<ActiveBlock>, atMillis: Long) {
@@ -208,6 +277,22 @@ class GoalRepository(
             attemptDao.insert(BlockAttemptEntity(goalId = it.goalId, packageName = it.packageName, kind = it.kind, attemptedAt = atMillis))
         }
     }
+
+    suspend fun logTempAccess(use: TempAccessUse, goalIds: List<Long>, reason: String, minutes: Int) {
+        tempAccessDao.insert(
+            TempAccessEntity(
+                packageName = use.packageName,
+                goalIds = goalIds.filter { it > 0 }.joinToString(","),
+                reason = reason,
+                startedAt = use.startedAtMillis,
+                endsAt = use.endsAtMillis,
+                minutes = minutes,
+            ),
+        )
+    }
+
+    suspend fun markTempAccessEndedEarly(use: TempAccessUse, endedAtMillis: Long) =
+        tempAccessDao.markEndedEarly(use.packageName, use.startedAtMillis, endedAtMillis)
 
     suspend fun attemptsToday(goalId: Long): Int {
         val dayStart = LocalDate.now(clock.zone).atStartOfDay(clock.zone)
@@ -318,7 +403,7 @@ class GoalRepository(
     }
 
     /** Fires whenever goals or results change, so alarms can be rebuilt from the database. */
-    val changes: Flow<Unit> = kotlinx.coroutines.flow.combine(goals, checkIns) { _, _ -> }
+    val changes: Flow<Unit> = kotlinx.coroutines.flow.combine(goals, checkIns, pendingChanges) { _, _, _ -> }
 
     /** What to warn about right now and when the app next needs to wake up. */
     suspend fun warningBatch(): WarningBatch {

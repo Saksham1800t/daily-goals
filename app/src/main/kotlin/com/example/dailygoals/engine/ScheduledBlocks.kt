@@ -56,7 +56,7 @@ object ScheduledBlocks {
             if (current == null || instant < current.first || instant >= current.second) return@forEach
             val end = if (next != null && next.first == current.second) next.second else current.second
             goal.avoidance.temptingPackages.forEach { pkg ->
-                active += ActiveBlock(goal.id, goal.name, pkg, BlockKind.SCHEDULED, end.toEpochMilli(), goal.discipline.blockMessage, today.toString())
+                active += ActiveBlock(goal.id, goal.name, pkg, BlockKind.SCHEDULED, end.toEpochMilli(), goal.discipline.blockMessage, today.toString(), goal.discipline.allowTempAccess)
             }
         }
         return ScheduledPlan(active, changes.filter { it > instant }.minOrNull())

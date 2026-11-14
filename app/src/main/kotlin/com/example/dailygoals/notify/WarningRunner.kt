@@ -23,6 +23,7 @@ class WarningRunner(
     private val lock = Mutex()
 
     suspend fun run() = lock.withLock {
+        repository.applyDuePending()
         repository.evaluate()
         val scheduled = repository.scheduledBatch()
         blockSync.apply(scheduled.blocks)

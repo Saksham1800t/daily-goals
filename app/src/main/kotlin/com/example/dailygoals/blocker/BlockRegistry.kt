@@ -17,6 +17,10 @@ import com.example.dailygoals.engine.BlockSet
 import com.example.dailygoals.engine.EmergencyPause
 import com.example.dailygoals.engine.PauseLength
 import com.example.dailygoals.engine.PauseUse
+import com.example.dailygoals.engine.TempAccess
+import com.example.dailygoals.engine.TempAccessOffer
+import com.example.dailygoals.engine.TempAccessSettings
+import com.example.dailygoals.engine.TempAccessUse
 import java.time.Instant
 import java.time.ZoneId
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -58,7 +62,8 @@ class BlockRegistry(private val context: Context) {
     }
 
     /** Recent times when blocks did not apply. */
-    fun lifts(): List<BlockLift> = pauseUses.map { BlockLift(it.startedAtMillis, it.endsAtMillis) }
+    fun lifts(): List<BlockLift> =
+        pauseUses.map { BlockLift(it.startedAtMillis, it.endsAtMillis) } + tempUses.map { BlockLift(it.startedAtMillis, it.endsAtMillis, it.packageName) }
 
     /** True the first time it is called for this goal and date, so a question is asked once. */
     fun markAsked(goalId: Long, date: String): Boolean {
@@ -111,6 +116,62 @@ class BlockRegistry(private val context: Context) {
         return next.last()
     }
 
+    var tempSettings: TempAccessSettings
+        get() = TempAccessSettings(
+            enabled = prefs.getBoolean(KEY_TEMP_ENABLED, true),
+            maxUsesPerDay = prefs.getInt(KEY_TEMP_USES, TempAccessSettings().maxUsesPerDay),
+            maxMinutes = prefs.getInt(KEY_TEMP_MINUTES, TempAccessSettings().maxMinutes),
+            waitSeconds = prefs.getInt(KEY_TEMP_WAIT, TempAccessSettings().waitSeconds),
+        )
+        set(value) {
+            val safe = value.clamped()
+            prefs.edit()
+                .putBoolean(KEY_TEMP_ENABLED, safe.enabled)
+                .putInt(KEY_TEMP_USES, safe.maxUsesPerDay)
+                .putInt(KEY_TEMP_MINUTES, safe.maxMinutes)
+                .putInt(KEY_TEMP_WAIT, safe.waitSeconds)
+                .apply()
+            touch()
+        }
+
+    val tempUses: List<TempAccessUse>
+        get() = BlockCodec.decodeTempUses(prefs.getString(KEY_TEMP_USE_LIST, "").orEmpty())
+
+    private fun saveTempUses(uses: List<TempAccessUse>) {
+        prefs.edit().putString(KEY_TEMP_USE_LIST, BlockCodec.encodeTempUses(uses)).apply()
+        touch()
+    }
+
+    fun tempOffer(blocks: AppBlocks, nowMillis: Long = System.currentTimeMillis()): TempAccessOffer =
+        TempAccess.offer(tempSettings, tempUses, blocks.blocks.map { it.allowTempAccess }, nowMillis, ZoneId.systemDefault())
+
+    fun tempUsesLeft(nowMillis: Long = System.currentTimeMillis()): Int =
+        TempAccess.usesLeft(tempSettings, tempUses, nowMillis, ZoneId.systemDefault())
+
+    /** Unlocks one app for [minutes]; null when the rules refuse it at this moment. */
+    fun startTempAccess(packageName: String, minutes: Int, reason: String, waitedSeconds: Int, nowMillis: Long = System.currentTimeMillis()): TempAccessUse? {
+        val blocks = blockFor(packageName, nowMillis) ?: return null
+        val settings = tempSettings
+        if (tempOffer(blocks, nowMillis) != TempAccessOffer.AVAILABLE) return null
+        if (TempAccess.errors(settings, waitedSeconds, reason, minutes).isNotEmpty()) return null
+        val next = TempAccess.trimmed(TempAccess.start(tempUses, packageName, minutes, nowMillis), nowMillis)
+        saveTempUses(next)
+        return next.last()
+    }
+
+    fun activeTempAccess(packageName: String, nowMillis: Long = System.currentTimeMillis()): TempAccessUse? =
+        TempAccess.active(tempUses, packageName, nowMillis)
+
+    /** Ends a running access now and returns the use that was ended. */
+    fun endTempAccess(packageName: String, nowMillis: Long = System.currentTimeMillis()): TempAccessUse? {
+        val uses = tempUses
+        val running = TempAccess.active(uses, packageName, nowMillis) ?: return null
+        saveTempUses(TempAccess.endEarly(uses, packageName, nowMillis))
+        return running
+    }
+
+    private fun unlocked(nowMillis: Long): Set<String> = TempAccess.unlockedPackages(tempUses, nowMillis)
+
     var scheduledMessage: String
         get() = prefs.getString(KEY_SCHEDULED_MESSAGE, null) ?: BlockMessages.DEFAULT_SCHEDULED
         set(value) = putText(KEY_SCHEDULED_MESSAGE, value)
@@ -147,14 +208,14 @@ class BlockRegistry(private val context: Context) {
     }
 
     fun blockFor(packageName: String, nowMillis: Long = System.currentTimeMillis()): AppBlocks? =
-        BlockSet.blockFor(packageName, blocks, safeApps, context.packageName, pauseActive(nowMillis), nowMillis)
+        BlockSet.blockFor(packageName, blocks, safeApps, context.packageName, pauseActive(nowMillis), nowMillis, unlocked(nowMillis))
 
     fun conflicts(nowMillis: Long = System.currentTimeMillis()): List<AppBlocks> =
         BlockSet.conflicts(blocks, safeApps, context.packageName, nowMillis)
 
     /** Every package the service should treat as blocked right now, or none while the pause runs. */
     fun blockedPackages(nowMillis: Long = System.currentTimeMillis()): Set<String> =
-        if (pauseActive(nowMillis)) emptySet() else conflicts(nowMillis).map { it.packageName }.toSet()
+        if (pauseActive(nowMillis)) emptySet() else conflicts(nowMillis).map { it.packageName }.toSet() - unlocked(nowMillis)
 
     private fun detectDefaultSafeApps(): Set<String> {
         val pm = context.packageManager
@@ -185,6 +246,11 @@ class BlockRegistry(private val context: Context) {
         private const val KEY_PUNISHMENT_MESSAGE = "punishment_message"
         private const val KEY_SHOW_ATTEMPTS = "show_attempts"
         private const val KEY_ASKED = "asked_days"
+        private const val KEY_TEMP_ENABLED = "temp_enabled"
+        private const val KEY_TEMP_USES = "temp_uses_per_day"
+        private const val KEY_TEMP_MINUTES = "temp_max_minutes"
+        private const val KEY_TEMP_WAIT = "temp_wait_seconds"
+        private const val KEY_TEMP_USE_LIST = "temp_use_list"
         private const val MAX_ASKED = 60
 
         private val AUTHENTICATORS = listOf(

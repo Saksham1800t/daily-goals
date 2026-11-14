@@ -29,7 +29,7 @@ class BlockingRunner(
         val until = plan.blockUntilMillis
         if (until != null) {
             plan.blockPackages.forEach { pkg ->
-                registry.addBlock(ActiveBlock(goal.id, goal.name, pkg, BlockKind.PUNISHMENT, until, goal.discipline.blockMessage, date.toString()))
+                registry.addBlock(ActiveBlock(goal.id, goal.name, pkg, BlockKind.PUNISHMENT, until, goal.discipline.blockMessage, date.toString(), goal.discipline.allowTempAccess))
             }
             BlockerWatchdog.schedule(context)
             BlockerService.instance?.recheckFront()
@@ -39,6 +39,13 @@ class BlockingRunner(
     }
 
     override fun lifts(): List<BlockLift> = registry.lifts()
+
+    override fun activeBlocks(): List<ActiveBlock> = registry.blocks.filter { System.currentTimeMillis() < it.endsAtMillis }
+
+    override fun applySetting(key: String, value: String) {
+        CoolingOffGate.applySetting(registry, key, value)
+        BlockerService.instance?.recheckFront()
+    }
 
     override fun askWhetherUsed(goal: Goal, date: LocalDate) {
         if (registry.markAsked(goal.id, date.toString())) notifier.ask(goal, date)

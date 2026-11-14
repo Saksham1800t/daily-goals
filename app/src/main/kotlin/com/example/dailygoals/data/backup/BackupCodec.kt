@@ -103,6 +103,10 @@ object BackupCodec {
 
     private fun JSONObject.stringOrNull(key: String): String? = if (isNull(key)) null else getString(key)
 
+    fun encodeGoal(goal: GoalEntity): String = goalJson(goal).toString()
+
+    fun decodeGoal(text: String): GoalEntity = goalFrom(JSONObject(text))
+
     private fun goalJson(goal: GoalEntity) = JSONObject().apply {
         put("id", goal.id)
         put("name", goal.name)

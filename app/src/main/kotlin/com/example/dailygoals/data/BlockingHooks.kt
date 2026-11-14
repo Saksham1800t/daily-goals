@@ -1,5 +1,6 @@
 package com.example.dailygoals.data
 
+import com.example.dailygoals.engine.ActiveBlock
 import com.example.dailygoals.engine.BlockLift
 import com.example.dailygoals.model.Goal
 import java.time.LocalDate
@@ -14,6 +15,12 @@ interface BlockingHooks {
 
     /** Recent times when blocks did not apply, in real epoch millis. */
     fun lifts(): List<BlockLift>
+
+    /** Every block that has not ended yet, with end times in real epoch millis. */
+    fun activeBlocks(): List<ActiveBlock>
+
+    /** A held settings change has come due. */
+    fun applySetting(key: String, value: String)
 
     /** A block was lifted during the goal's blocked time, so only the user knows whether the day was kept. */
     fun askWhetherUsed(goal: Goal, date: LocalDate)
