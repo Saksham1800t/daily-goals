@@ -363,8 +363,25 @@
     <string name="punish_duration">Block the apps for</string>
     <string name="punish_hours">%1$d h</string>
     <string name="punish_choose_apps">Choose apps to block</string>
-    <string name="punish_apps_chosen">%1$d apps chosen, tap to change</string>
     <string name="punish_app_safe">Always allowed, never blocked</string>
     <string name="punish_message">Block message for this goal (optional)</string>
     <string name="error_block_message_long">The message can be at most 160 characters.</string>
+
+    <plurals name="punish_apps_chosen">
+        <item quantity="one">%1$d app chosen, tap to change</item>
+        <item quantity="other">%1$d apps chosen, tap to change</item>
+    </plurals>
+    <plurals name="attempts_today">
+        <item quantity="one">You tried to open a blocked app %1$d time today.</item>
+        <item quantity="other">You tried to open a blocked app %1$d times today.</item>
+    </plurals>
+    <string name="form_block_apps">Blocked apps</string>
+    <string name="scheduled_block_switch">Block these apps during the time window</string>
+    <string name="scheduled_block_help_window">On days this goal is due, the apps are blocked from the window start to its end.</string>
+    <string name="scheduled_block_help_all_day">This goal has no time window, so the apps are blocked all day on days it is due.</string>
+    <string name="scheduled_block_auto_keep">Mark the day kept when the block ends</string>
+    <string name="scheduled_block_auto_keep_help">If a block was lifted during that time, you are asked instead.</string>
+    <string name="keep_question_text">A block was lifted during this goal\'s blocked time. Did you use the app?</string>
+    <string name="keep_question_no">No, I kept it</string>
+    <string name="keep_question_yes">Yes, I used it</string>
 </resources>

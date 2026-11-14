@@ -57,10 +57,18 @@ data class GoalFormState(
     val blockMinutes: Int = PunishmentRules.DEFAULT_BLOCK_MINUTES,
     val blockMessage: String = "",
     val blockPackages: Set<String> = emptySet(),
+    val scheduledBlock: Boolean = false,
+    val autoKeep: Boolean = true,
+    val attemptsToday: Int = 0,
     val errors: Set<GoalError> = emptySet(),
     val original: Goal? = null,
 ) {
     val isEdit: Boolean get() = goalId != 0L
+
+    /** Scheduled blocking needs fixed days, so it is not offered for goals counted per week or month. */
+    val canScheduleBlock: Boolean get() = type == GoalType.AVOID && frequency != Frequency.PER_WEEK && frequency != Frequency.PER_MONTH
+    val punishmentBlocks: Boolean get() = PunishmentRules.blocksApps(intensity)
+    val blocksAnything: Boolean get() = punishmentBlocks || (scheduledBlock && canScheduleBlock)
     val window: TimeWindow? get() = if (hasWindow) TimeWindow(startMinute, endMinute) else null
 
     /** A rule that needs a window is switched off while the goal has none. */
@@ -72,6 +80,8 @@ data class GoalFormState(
             intensity = intensity,
             blockMinutes = blockMinutes,
             blockMessage = blockMessage.trim().ifEmpty { null },
+            scheduledBlockEnabled = scheduledBlock && canScheduleBlock,
+            autoKeepAtWindowEnd = autoKeep,
         )
 
     val avoidance: GoalAvoidance get() = GoalAvoidance(blockPackages)
@@ -140,6 +150,9 @@ class GoalFormViewModel(private val repository: GoalRepository, private val cloc
                     blockMinutes = goal.discipline.blockMinutes,
                     blockMessage = goal.discipline.blockMessage.orEmpty(),
                     blockPackages = goal.avoidance.temptingPackages,
+                    scheduledBlock = goal.discipline.scheduledBlockEnabled,
+                    autoKeep = goal.discipline.autoKeepAtWindowEnd,
+                    attemptsToday = repository.attemptsToday(goalId),
                     original = goal,
                 )
             }
